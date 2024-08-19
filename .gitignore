@@ -1,0 +1,11 @@
+*.pyc
+runs/
+*.npz
+*.pt
+*.tfevents*
+*.egg-info/
+resources/
+past_param_saved/
+scripts_saved/
+
+*/__pycache__/

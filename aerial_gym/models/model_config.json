@@ -1,0 +1,5 @@
+{
+    "learning_rate": 0.0026,
+    "num_epoch": 1000,
+    "step_per_epoch": 1000
+}
