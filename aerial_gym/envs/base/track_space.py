@@ -6,12 +6,17 @@
 """ 
     Modified from TrackGroundVer7
     Still tracking the object on the ground, hh
+    Target will randomly move according to prepared dataset
+    NOTICE: the number of steps shouldn't be larger than 1k
+    Because of the limitation of dataset
+    NOTICE: remeber to update_traj at the beginning of a epoch
 
 """
 import numpy as np
 import os
 # os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 import torch
+from torch.utils.data import DataLoader
 from pytorch3d.transforms import quaternion_to_matrix, matrix_to_euler_angles, euler_angles_to_matrix, matrix_to_quaternion
 
 from aerial_gym import AERIAL_GYM_ROOT_DIR, AERIAL_GYM_ROOT_DIR
@@ -23,6 +28,8 @@ from .track_ground_config import TrackGroundCfg
 
 from aerial_gym.utils.helpers import asset_class_to_AssetOptions
 from aerial_gym.utils.math import rand_circle_point
+
+from aerial_gym.data.dataset import TargetDataset
 
 from aerial_gym.envs.base.dynamics_isaac import IsaacGymDynamics
 
@@ -99,6 +106,14 @@ class TrackSpaceVer0(BaseTask):
             cam_ref_env = self.cfg.viewer.ref_env
             
             self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
+
+        # init dataset
+        self.tar_traj_dataset = TargetDataset('/home/zim/Documents/python/VTT/aerial_gym/data', self.device)
+        self.tar_traj_dataloader = DataLoader(self.tar_traj_dataset, batch_size=self.num_envs, shuffle=True)
+        self.tar_traj_iter = iter(self.tar_traj_dataloader)
+        self.tar_traj = next(self.tar_traj_iter)
+        # print("Shape of tar_traj:", self.tar_traj.shape)
+        self.count_step = torch.zeros((self.num_envs, ), dtype=torch.long, device=self.device)
         
         
 
@@ -224,19 +239,27 @@ class TrackSpaceVer0(BaseTask):
             # it is called in the render function.
             self.post_physics_step()
 
+        # set position
+        self.tar_root_states[range(self.num_envs), 0:3] = self.tar_traj[range(self.num_envs), self.count_step[range(self.num_envs)], :3]
+        self.tar_root_states[:, 2] = 0.2
+        # set linearvels
+        self.tar_root_states[:, 7:10] = 0
+        # set angvels
+        self.tar_root_states[:, 10:13] = 0
+        # set quats
+        self.tar_root_states[:, 3:7] = 0
+        self.tar_root_states[:, 6] = 2
+
         self.render(sync_frame_time=False)
         
         self.progress_buf += 1
         self.compute_observations()
         self.compute_tar_observations()
 
-        # self.check_reset()
-        # reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
-        # if len(reset_env_ids) > 0:
-        #     self.reset_idx(reset_env_ids)
 
         self.time_out_buf = self.progress_buf > self.max_len_sample
         self.extras["time_outs"] = self.time_out_buf
+        self.count_step += 1
 
 
         return self.get_quad_state(), self.get_tar_state()
@@ -259,10 +282,11 @@ class TrackSpaceVer0(BaseTask):
 
     def set_reset_idx(self, env_ids):
         num_resets = len(env_ids)
+        self.count_step[env_ids] = 0
 
         self.root_states[env_ids] = self.initial_root_states[env_ids]
         # reset position
-        self.root_states[env_ids, 0:2] = rand_circle_point(num_resets, 5, self.device)
+        self.root_states[env_ids, 0:3] = self.tar_traj[env_ids, self.count_step[env_ids], :3]
         self.root_states[env_ids, 2] = 5.5
         # reset linevels
         self.root_states[env_ids, 7:10] = 0
@@ -275,7 +299,12 @@ class TrackSpaceVer0(BaseTask):
 
         self.tar_root_states[env_ids] = self.initial_tar_states[env_ids]
         # reset position
-        self.tar_root_states[env_ids, 0:3] = 0
+        # print(torch.tensor([self.tar_traj[idx, self.count_step[idx], :3] for idx in env_ids]).shape)
+        # self.tar_root_states[env_ids, 0:3] = torch.tensor([self.tar_traj[idx, self.count_step[idx], :3] for idx in env_ids])
+        # for idx in env_ids:
+        #     self.tar_root_states[idx, 0:3] = self.tar_traj[idx, self.count_step[idx], :3]
+        self.tar_root_states[env_ids, 0:3] = self.tar_traj[env_ids, self.count_step[env_ids], :3]
+        self.tar_root_states[env_ids, 2] = 0.2
 
         self.tar_root_states[env_ids, 2] = 0.3
 
@@ -290,6 +319,7 @@ class TrackSpaceVer0(BaseTask):
         self.reset_buf[env_ids] = 0
         self.progress_buf[env_ids] = 0
         self.time_out_buf[env_ids] = 0
+        
 
 
     def pre_physics_step(self, _actions):
@@ -467,3 +497,6 @@ class TrackSpaceVer0(BaseTask):
         
         
         return reset_buf, reset_idx
+
+    def update_target_traj(self):
+        self.tar_traj = next(self.tar_traj_iter)

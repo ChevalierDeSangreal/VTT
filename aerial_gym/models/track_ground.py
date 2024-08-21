@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch
 import torchvision.models as models
-import torchvision.transforms as transforms
 from torchsummary import summary
 from .resnet import Resnet
 

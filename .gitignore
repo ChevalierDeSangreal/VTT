@@ -7,5 +7,6 @@ runs/
 resources/
 past_param_saved/
 scripts_saved/
+data/
 
 */__pycache__/
