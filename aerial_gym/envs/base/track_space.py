@@ -24,7 +24,7 @@ from aerial_gym import AERIAL_GYM_ROOT_DIR, AERIAL_GYM_ROOT_DIR
 from isaacgym import gymtorch, gymapi
 from isaacgym.torch_utils import *
 from aerial_gym.envs.base.base_task import BaseTask
-from .track_ground_config import TrackGroundCfg
+from .track_space_config import TrackSpaceCfg
 
 from aerial_gym.utils.helpers import asset_class_to_AssetOptions
 from aerial_gym.utils.math import rand_circle_point
@@ -35,7 +35,7 @@ from aerial_gym.envs.base.dynamics_isaac import IsaacGymDynamics
 
 class TrackSpaceVer0(BaseTask):
 
-    def __init__(self, cfg: TrackGroundCfg, sim_params, physics_engine, sim_device, headless):
+    def __init__(self, cfg: TrackSpaceCfg, sim_params, physics_engine, sim_device, headless):
         self.cfg = cfg
 
         self.max_episode_length = int(self.cfg.env.episode_length_s / self.cfg.sim.dt)
@@ -231,6 +231,8 @@ class TrackSpaceVer0(BaseTask):
         print("\n\n\n\n\n ENVIRONMENT CREATED \n\n\n\n\n\n")
 
     def step(self, actions):
+
+
         # step physics and render each frame
         for i in range(self.cfg.env.num_control_steps_per_env_step):
             self.pre_physics_step(actions)
@@ -249,7 +251,8 @@ class TrackSpaceVer0(BaseTask):
         # set quats
         self.tar_root_states[:, 3:7] = 0
         self.tar_root_states[:, 6] = 2
-
+        
+        self.gym.set_actor_root_state_tensor(self.sim, self.root_tensor)
         self.render(sync_frame_time=False)
         
         self.progress_buf += 1
@@ -287,7 +290,7 @@ class TrackSpaceVer0(BaseTask):
         self.root_states[env_ids] = self.initial_root_states[env_ids]
         # reset position
         self.root_states[env_ids, 0:3] = self.tar_traj[env_ids, self.count_step[env_ids], :3]
-        self.root_states[env_ids, 2] = 5.5
+        self.root_states[env_ids, 2] = 7
         # reset linevels
         self.root_states[env_ids, 7:10] = 0
         # reset angvels
@@ -500,3 +503,27 @@ class TrackSpaceVer0(BaseTask):
 
     def update_target_traj(self):
         self.tar_traj = next(self.tar_traj_iter)
+
+    def get_relative_distance(self):
+        quad_state = self.get_quad_state()
+        tar_state = self.get_tar_state()
+        quad_pos = quad_state[:, :3]
+        tar_pos = tar_state[:, :3]
+        relative_distance = tar_pos - quad_pos
+        return relative_distance
+
+    def get_future_relative_distance(self, len=50, sample_fre=10):
+        quad_state = self.get_quad_state()
+        quad_pos = quad_state[:, :3]
+        
+        future_tar_state = []
+        for i in range(self.num_envs):
+            future_tar_state.append(self.tar_traj[i, self.count_step[i]:self.count_step[i]+len:sample_fre, :3])
+        # print(future_tar_state)
+        future_tar_state = torch.stack(future_tar_state, dim=0)
+        expanded_quad_pos = quad_pos.unsqueeze(1).expand(-1, len // sample_fre, -1)
+        future_relative_distance = future_tar_state[:, :, :3] - expanded_quad_pos
+        return future_relative_distance
+    
+
+

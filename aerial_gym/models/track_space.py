@@ -5,10 +5,10 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 from .resnet import Resnet
 
-class MLP(nn.Module):
+class MyMLP(nn.Module):
 
-    def __init__(self, input_size=20, hidden_size1=256, hidden_size2=256, hidden_size3=256, hidden_size4=256, output_size=4, device='cpu'):
-        super(MLP, self).__init__()
+    def __init__(self, input_size=16, hidden_size1=256, hidden_size2=256, hidden_size3=256, hidden_size4=256, output_size=4, device='cpu'):
+        super(MyMLP, self).__init__()
         self.hidden_layer1 = nn.Linear(input_size, hidden_size1).to(device)
         self.activation1 = nn.ReLU().to(device)
         self.hidden_layer2 = nn.Linear(hidden_size1, hidden_size2).to(device)
@@ -36,7 +36,7 @@ class MLP(nn.Module):
         return x
     
 class LSTM(nn.Module):
-    def __init__(self, input_size=15, hidden_size=64, num_layers=2, output_size=5):
+    def __init__(self, input_size=12, hidden_size=64, num_layers=2, output_size=4):
         super(LSTM, self).__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
@@ -46,7 +46,8 @@ class LSTM(nn.Module):
         self.fc = nn.Linear(hidden_size, output_size)
     
     def forward(self, imu_quadrotor, rel_dis):
-        x = torch.cat((imu_quadrotor, rel_dis), dim=1)
+        imu_quadrotor = imu_quadrotor.unsqueeze(1).expand(-1, rel_dis.size(1), -1)
+        x = torch.cat((imu_quadrotor, rel_dis), dim=2)
         
         h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
         c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
@@ -59,10 +60,11 @@ class LSTM(nn.Module):
         return out
 
 class LSTMDecoder(nn.Module):
-    def __init__(self, input_size=5, hidden_size=64, num_layers=2, output_size=3):
-        super(LSTM, self).__init__()
+    def __init__(self, length, input_size=4, hidden_size=64, num_layers=2, output_size=3):
+        super(LSTMDecoder, self).__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
+        self.length = length
 
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
 
@@ -70,6 +72,8 @@ class LSTMDecoder(nn.Module):
     
     def forward(self, x):
         
+        x = x.unsqueeze(1).expand(-1, self.length, -1)
+
         h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
         c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
         
@@ -79,16 +83,18 @@ class LSTMDecoder(nn.Module):
 
         return out
 
-class VTTVer0(nn.Module):
-    def __init__(self):
-        self.mlp = MLP()
-        self.lstm = LSTM()
-        self.lstm_decoder = LSTMDecoder()
+class TrackSpaceModuleVer0(nn.Module):
+    def __init__(self, device):
+        super(TrackSpaceModuleVer0, self).__init__()
+        self.mlp = MyMLP().to(device)
+        self.lstm = LSTM().to(device)
+        self.lstm_decoder = LSTMDecoder(5).to(device)   
+        self.device = device
 
-    def forward(self, imu_quadrotor, rel_dis):
-        latent_intent = self.lstm(imu_quadrotor, rel_dis)
+    def forward(self, imu_quadrotor, rel_dis, real_rel_dis):
+        latent_intent = self.lstm(imu_quadrotor, real_rel_dis)
         action = self.mlp(imu_quadrotor, rel_dis, latent_intent)
-        predict_rel_dis = self.lstm_decoder
+        predict_rel_dis = self.lstm_decoder(latent_intent)
         return action, predict_rel_dis
     
     
