@@ -22,9 +22,9 @@ def space_lossVer0(quad_state, predicted_rel_dis, real_rel_dis, tar_pos, tar_h, 
     # print("Real relative distance size:", real_rel_dis.size())
     loss_intent = torch.mean(criterion(predicted_rel_dis, real_rel_dis), dim=1)
     loss_intent = torch.mean(loss_intent, dim=1)
-    print("loss_intent size:", loss_intent.size())
+    # print("loss_intent size:", loss_intent.size())
 
-    return 0.5 * loss_direction + 0.2 * loss_h + 0.2 * loss_ori + 0.1 * loss_intent, loss_direction, loss_h, loss_ori, loss_intent
+    return 0.45 * loss_direction + 0.4 * loss_h + 0.05 * loss_ori + 0.1 * loss_intent, loss_direction, loss_h, loss_ori, loss_intent
 
 
 def acc_loss(quad_state, tar_pos, criterion):

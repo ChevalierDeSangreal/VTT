@@ -33,6 +33,8 @@ from aerial_gym.data.dataset import TargetDataset
 
 from aerial_gym.envs.base.dynamics_isaac import IsaacGymDynamics
 
+import itertools
+
 class TrackSpaceVer0(BaseTask):
 
     def __init__(self, cfg: TrackSpaceCfg, sim_params, physics_engine, sim_device, headless):
@@ -110,7 +112,7 @@ class TrackSpaceVer0(BaseTask):
         # init dataset
         self.tar_traj_dataset = TargetDataset('/home/zim/Documents/python/VTT/aerial_gym/data', self.device)
         self.tar_traj_dataloader = DataLoader(self.tar_traj_dataset, batch_size=self.num_envs, shuffle=True)
-        self.tar_traj_iter = iter(self.tar_traj_dataloader)
+        self.tar_traj_iter = itertools.cycle(self.tar_traj_dataloader)
         self.tar_traj = next(self.tar_traj_iter)
         # print("Shape of tar_traj:", self.tar_traj.shape)
         self.count_step = torch.zeros((self.num_envs, ), dtype=torch.long, device=self.device)
@@ -289,6 +291,7 @@ class TrackSpaceVer0(BaseTask):
 
         self.root_states[env_ids] = self.initial_root_states[env_ids]
         # reset position
+        # print(self.count_step.size(), self.tar_traj.size(),env_ids)
         self.root_states[env_ids, 0:3] = self.tar_traj[env_ids, self.count_step[env_ids], :3]
         self.root_states[env_ids, 2] = 7
         # reset linevels
@@ -356,6 +359,8 @@ class TrackSpaceVer0(BaseTask):
         self.gym.refresh_actor_root_state_tensor(self.sim)
 
     def compute_observations(self):
+        # print("obs_buf:", self.obs_buf.size(), self.obs_buf)
+        # print("root_positions", self.root_positions.size(), self.root_positions)
         self.obs_buf[..., :3] = self.root_positions
         self.obs_buf[..., 3:7] = self.root_quats
         self.obs_buf[..., 7:10] = self.root_linvels
@@ -502,7 +507,10 @@ class TrackSpaceVer0(BaseTask):
         return reset_buf, reset_idx
 
     def update_target_traj(self):
+        
         self.tar_traj = next(self.tar_traj_iter)
+        while self.tar_traj.size(0) < self.num_envs:
+            self.tar_traj = next(self.tar_traj_iter)
 
     def get_relative_distance(self):
         quad_state = self.get_quad_state()

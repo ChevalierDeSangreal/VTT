@@ -30,7 +30,7 @@ def get_args():
         {"name": "--headless", "action": "store_true", "help": "Force display off at all times"},
         {"name": "--horovod", "action": "store_true", "default": False, "help": "Use horovod for multi-gpu training"},
         {"name": "--num_envs", "type": int, "default": 8, "help": "Number of environments to create. Batch size will be equal to this"},
-        {"name": "--seed", "type": int, "default": 41232, "help": "Random seed. Overrides config file if provided."},
+        {"name": "--seed", "type": int, "default": 4132, "help": "Random seed. Overrides config file if provided."},
 
         # train setting
         {"name": "--learning_rate", "type":float, "default": 5.6e-5,
@@ -39,11 +39,11 @@ def get_args():
             "help": "batch size of training. Notice that batch_size should be equal to num_envs"},
         {"name": "--num_worker", "type":int, "default": 4,
             "help": "num worker of dataloader"},
-        {"name": "--num_epoch", "type":int, "default": 100,
+        {"name": "--num_epoch", "type":int, "default": 1000,
             "help": "num of epoch"},
         {"name": "--len_sample", "type":int, "default": 500,
             "help": "length of a sample"},
-        {"name": "--tmp", "type": bool, "default": False, "help": "Set false to officially save the trainning log"},
+        {"name": "--tmp", "type": bool, "default": True, "help": "Set false to officially save the trainning log"},
         {"name": "--gamma", "type":int, "default": 0.8,
             "help": "how much will learning rate decrease"},
         {"name": "--step_size", "type":int, "default": 100,
@@ -113,8 +113,8 @@ if __name__ == "__main__":
     dynamic = IsaacGymDynamics()
     
     model = TrackSpaceModuleVer0(device=device).to(device)
-    checkpoint = torch.load(args.param_load_path_track_simple, map_location=device)
-    model.load_state_dict(checkpoint)
+    # checkpoint = torch.load(args.param_load_path_track_simple, map_location=device)
+    # model.load_state_dict(checkpoint)
 
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, eps=1e-5)
     criterion = nn.MSELoss(reduction='none')
@@ -175,7 +175,7 @@ if __name__ == "__main__":
 
                 loss, loss_direction, loss_h, loss_ori, loss_intent = space_lossVer0(now_quad_state, predict_rel_dis, real_rel_dis, tar_pos, 7, tar_ori, criterion)
                 
-                loss.backward(not_reset_buf)
+                # loss.backward(not_reset_buf)
                 ave_loss = torch.sum(torch.mul(not_reset_buf, loss)) / (args.batch_size - len(reset_idx))
                 sum_loss += ave_loss
                 num_loss += args.batch_size - len(reset_idx)
@@ -208,9 +208,9 @@ if __name__ == "__main__":
         print(f"Epoch {epoch}, Ave loss = {ave_loss}, num reset = {num_reset}")
 
         
-        if (epoch + 1) % 50 == 0:
-            print("Saving Model...")
-            torch.save(model.state_dict(), args.param_save_path_track_simple)
+        # if (epoch + 1) % 55 == 0:
+        #     print("Saving Model...")
+            # torch.save(model.state_dict(), args.param_save_path_track_simple)
     
         envs.update_target_traj()
     writer.close()

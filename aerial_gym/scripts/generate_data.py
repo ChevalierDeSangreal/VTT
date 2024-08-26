@@ -229,7 +229,7 @@ def compute_random_trajectory(
     seed=0,
 ):
     # print("Computing random trajectory!")
-    assert dt == 0.01
+    # assert dt == 0.01
 
     debug = False
 
@@ -540,8 +540,8 @@ def make_dataset(num_traj):
                 config["freq_y"],
                 config["freq_z"],
                 config["duration"],
-                0.01,
-                seed=rand,
+                0.005,
+                seed=rand+114,
             )
             np.save(os.path.join(out_path, f"traj_{rand}.npy"), trajectory[:, :10])
 
