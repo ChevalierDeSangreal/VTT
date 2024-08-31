@@ -85,4 +85,4 @@ class AerialRobotCfg(BaseConfig):
             contact_collection = 0 # 0: never, 1: last sub-step, 2: all sub-steps (default=2)
 
     class other:
-        param_file_path = '/home/cgv841/wzm/FYP/AGAPG/aerial_gym/param_saved/dynamic_learntVer2.pth'
+        param_file_path = '/home/zim/Documents/python/AGAPG-main/aerial_gym/param_saved/dynamic_learntVer2.pth'

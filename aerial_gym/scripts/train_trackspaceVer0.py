@@ -41,7 +41,7 @@ def get_args():
             "help": "num worker of dataloader"},
         {"name": "--num_epoch", "type":int, "default": 100,
             "help": "num of epoch"},
-        {"name": "--len_sample", "type":int, "default": 500,
+        {"name": "--len_sample", "type":int, "default": 1000,
             "help": "length of a sample"},
         {"name": "--tmp", "type": bool, "default": False, "help": "Set false to officially save the trainning log"},
         {"name": "--gamma", "type":int, "default": 0.8,
@@ -103,9 +103,9 @@ if __name__ == "__main__":
 
     device = args.sim_device
     print("using device:", device)
-
+    # print("Here I am!!!")
     envs, env_cfg = task_registry.make_env(name=args.task, args=args)
-    
+    # print("Here I am!!!")
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -113,8 +113,8 @@ if __name__ == "__main__":
     dynamic = IsaacGymDynamics()
     
     model = TrackSpaceModuleVer0(device=device).to(device)
-    checkpoint = torch.load(args.param_load_path_track_simple, map_location=device)
-    model.load_state_dict(checkpoint)
+    # checkpoint = torch.load(args.param_load_path_track_simple, map_location=device)
+    # model.load_state_dict(checkpoint)
 
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, eps=1e-5)
     criterion = nn.MSELoss(reduction='none')
@@ -157,12 +157,12 @@ if __name__ == "__main__":
             
             now_quad_state = new_state_dyn
             
-            if (epoch + 1) % 5 == 0:
-                tar_pos[:, 2] = 7
-                if step > args.len_sample - 100:
-                    scaled_now_quad_pos = torch.max(new_state_dyn, torch.tensor(-10, device=device))
-                    scaled_now_quad_pos = torch.min(scaled_now_quad_pos, torch.tensor(10, device=device))
-                    dis = torch.sum(torch.norm(tar_pos - now_quad_state[:, :3], p=2, dim=1)) / args.batch_size
+            # if (epoch + 1) % 5 == 0:
+            #     tar_pos[:, 2] = 7
+            #     if step > args.len_sample - 100:
+            #         scaled_now_quad_pos = torch.max(new_state_dyn, torch.tensor(-10, device=device))
+            #         scaled_now_quad_pos = torch.min(scaled_now_quad_pos, torch.tensor(10, device=device))
+            #         dis = torch.sum(torch.norm(tar_pos - now_quad_state[:, :3], p=2, dim=1)) / args.batch_size
 
             if (step + 1) % 50 == 0:
                 reset_buf, reset_idx = envs.check_reset_out()
@@ -185,7 +185,6 @@ if __name__ == "__main__":
                 now_quad_state = now_quad_state.detach()
             
 
-            if (step + 1) % 50 == 0:
                 now_quad_state = envs.reset(reset_buf=reset_buf, reset_quad_state=now_quad_state).detach()
 
 
@@ -215,4 +214,3 @@ if __name__ == "__main__":
         envs.update_target_traj()
     writer.close()
     print("Training Complete!")
-            

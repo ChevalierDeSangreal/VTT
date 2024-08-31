@@ -42,7 +42,7 @@ from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
 import torchvision.models as models
 import sys
-sys.path.append('/home/cgv841/wzm/FYP/AGAPG')
+sys.path.append('/home/zim/Documents/python/AGAPG-main')
 
 from aerial_gym.envs import *
 from aerial_gym.utils import task_registry

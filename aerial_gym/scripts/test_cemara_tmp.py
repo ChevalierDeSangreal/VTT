@@ -11,7 +11,7 @@ import sys
 
 
 
-sys.path.append('/home/cgv841/wzm/FYP/AGAPG')
+sys.path.append('/home/zim/Documents/python/AGAPG-main')
 # print(sys.path)
 from aerial_gym.envs import *
 from aerial_gym.utils import task_registry
@@ -39,7 +39,7 @@ def get_args():
         {"name": "--len_sample", "type":int, "default": 100,
             "help": "length of a sample"},
 
-        {"name": "--param_path_dynamic", "type":str, "default": '/home/cgv841/wzm/FYP/AGAPG/aerial_gym/param_saved/dynamic_learntVer2.pth',
+        {"name": "--param_path_dynamic", "type":str, "default": '/home/zim/Documents/python/AGAPG-main/aerial_gym/param_saved/dynamic_learntVer2.pth',
             "help": "The path to dynamic model parameters"},
         ]
 

@@ -8,7 +8,7 @@ import numpy as np
 import torch
 import sys
 
-sys.path.append('/home/cgv841/wzm/FYP/AGAPG')
+sys.path.append('/home/zim/Documents/python/AGAPG-main')
 # print(sys.path)
 from aerial_gym.envs import *
 from aerial_gym.utils import task_registry

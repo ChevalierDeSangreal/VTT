@@ -247,7 +247,7 @@ class TrackSpaceVer0(BaseTask):
         self.tar_root_states[range(self.num_envs), 0:3] = self.tar_traj[range(self.num_envs), self.count_step[range(self.num_envs)], :3]
         self.tar_root_states[:, 2] = 0.2
         # set linearvels
-        self.tar_root_states[:, 7:10] = 0
+        self.tar_root_states[:, 7:10] = self.tar_traj[range(self.num_envs), self.count_step[range(self.num_envs)], 6:9]
         # set angvels
         self.tar_root_states[:, 10:13] = 0
         # set quats
@@ -310,12 +310,11 @@ class TrackSpaceVer0(BaseTask):
         # for idx in env_ids:
         #     self.tar_root_states[idx, 0:3] = self.tar_traj[idx, self.count_step[idx], :3]
         self.tar_root_states[env_ids, 0:3] = self.tar_traj[env_ids, self.count_step[env_ids], :3]
-        self.tar_root_states[env_ids, 2] = 0.2
-
         self.tar_root_states[env_ids, 2] = 0.3
 
         # reset linevels
-        self.tar_root_states[env_ids, 7:10] = 0
+        # self.tar_root_states[env_ids, 7:10] = 0
+        self.tar_root_states[env_ids, 7:10] = self.tar_traj[env_ids, self.count_step[env_ids], 6:9]
         # reset angvels
         self.tar_root_states[env_ids, 10:13] = 0
         # reset quats

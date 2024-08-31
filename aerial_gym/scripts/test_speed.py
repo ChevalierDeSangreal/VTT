@@ -22,7 +22,7 @@ import pytz
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 import matplotlib.cm as cm
-sys.path.append('/home/cgv841/wzm/FYP/AGAPG')
+sys.path.append('/home/zim/Documents/python/AGAPG-main')
 # print(sys.path)
 from aerial_gym.envs import *
 from aerial_gym.utils import task_registry, velh_loss, velh_lossVer2, velh_lossVer3, velh_lossVer5
@@ -51,7 +51,7 @@ def get_args():
         #     "help": "length of a sample"},
         {"name": "--tmp", "type": bool, "default": True, "help": "Set false to officially save the trainning log"},
         # model setting
-        {"name": "--param_load_path_track_simple", "type":str, "default": '/home/cgv841/wzm/FYP/AGAPG/aerial_gym/param_saved/track_groundVer17Ver2.pth',
+        {"name": "--param_load_path_track_simple", "type":str, "default": '/home/zim/Documents/python/AGAPG-main/aerial_gym/param_saved/track_groundVer17Ver2.pth',
             "help": "The path to model parameters"},
 
         # test setting
@@ -101,7 +101,7 @@ if __name__ == "__main__":
     run_name = f"Test__{args.experiment_name}__{args.seed}__{get_time()}"
     if args.tmp:
         run_name = 'tmp_' + run_name
-    writer = SummaryWriter(f"/home/cgv841/wzm/FYP/AGAPG/runs/{run_name}")
+    writer = SummaryWriter(f"/home/zim/Documents/python/AGAPG-main/runs/{run_name}")
     writer.add_text(
         "hyperparameters",
         "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
@@ -187,7 +187,7 @@ if __name__ == "__main__":
                     #     print(f"Speed {speed} in step {step}")
                 # if not step % 10:
                 #     file_name = f'tmp{step}.png'
-                #     envs.save_camera_output(file_name=file_name, file_path='/home/cgv841/wzm/FYP/AGAPG/aerial_gym/scripts/camera_output/frames/')
+                #     envs.save_camera_output(file_name=file_name, file_path='/home/zim/Documents/python/AGAPG-main/aerial_gym/scripts/camera_output/frames/')
     
     # 绘制连续热力图
     fig = plt.figure()
@@ -210,7 +210,7 @@ if __name__ == "__main__":
     ax.set_title('Heatmap of Speed')
     
     ax.view_init(elev=55)
-    plt.savefig(f'/home/cgv841/wzm/FYP/AGAPG/aerial_gym/scripts/charts_output/speed_hot_plot.png')
+    plt.savefig(f'/home/zim/Documents/python/AGAPG-main/aerial_gym/scripts/charts_output/speed_hot_plot.png')
     plt.show()
     print("Testing Complete!")
             

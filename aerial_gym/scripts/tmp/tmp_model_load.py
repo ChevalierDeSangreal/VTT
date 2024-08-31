@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/home/cgv841/wzm/FYP/AGAPG')
+sys.path.append('/home/zim/Documents/python/AGAPG-main')
 from aerial_gym.models import TrackGroundModelVer5
 
 model = TrackGroundModelVer5()

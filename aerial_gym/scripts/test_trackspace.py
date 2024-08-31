@@ -5,7 +5,6 @@ import os
 import random
 import time
 
-import gym
 import isaacgym  # noqa
 from isaacgym import gymutil
 from isaacgym.torch_utils import *
@@ -13,24 +12,22 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
-from torch.utils.data import DataLoader
 import sys
 from datetime import datetime
 import pytz
 
-sys.path.append('/home/zim/Documents/python/AGAPG-main')
+sys.path.append('/home/zim/Documents/python/VTT')
 # print(sys.path)
 from aerial_gym.envs import *
-from aerial_gym.utils import task_registry, velh_loss, velh_lossVer2, velh_lossVer3, velh_lossVer5
-from aerial_gym.models import TrackGroundModelVer7
+from aerial_gym.utils import task_registry, space_lossVer0
+from aerial_gym.models import TrackSpaceModuleVer0
 from aerial_gym.envs import IsaacGymDynamics
 # os.path.basename(__file__).rstrip(".py")
 def get_args():
     custom_parameters = [
-        {"name": "--task", "type": str, "default": "track_groundVer10", "help": "The name of the task."},
-        {"name": "--experiment_name", "type": str, "default": "tester", "help": "Name of the experiment to run or load."},
+        {"name": "--task", "type": str, "default": "track_spaceVer0", "help": "The name of the task."},
+        {"name": "--experiment_name", "type": str, "default": "test_height__h", "help": "Name of the experiment to run or load."},
         {"name": "--headless", "action": "store_true", "default": True, "help": "Force display off at all times"},
         {"name": "--horovod", "action": "store_true", "default": False, "help": "Use horovod for multi-gpu training"},
         {"name": "--num_envs", "type": int, "default": 8, "help": "Number of environments to create. Batch size will be equal to this"},
@@ -49,7 +46,7 @@ def get_args():
         #     "help": "length of a sample"},
         {"name": "--tmp", "type": bool, "default": True, "help": "Set false to officially save the trainning log"},
         # model setting
-        {"name": "--param_load_path_track_simple", "type":str, "default": '/home/zim/Documents/python/AGAPG-main/aerial_gym/param_saved/track_groundVer17Ver2.pth',
+        {"name": "--param_load_path_track_simple", "type":str, "default": '/home/zim/Documents/python/VTT/aerial_gym/param_saved/track_spaceVer0.pth',
             "help": "The path to model parameters"},
 
         # test setting
@@ -99,7 +96,7 @@ if __name__ == "__main__":
     run_name = f"Test__{args.experiment_name}__{args.seed}__{get_time()}"
     if args.tmp:
         run_name = 'tmp_' + run_name
-    writer = SummaryWriter(f"/home/zim/Documents/python/AGAPG-main/runs/{run_name}")
+    writer = SummaryWriter(f"/home/zim/Documents/python/AGAPG-main/aerial_gym/runs/{run_name}")
     writer.add_text(
         "hyperparameters",
         "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
@@ -116,69 +113,97 @@ if __name__ == "__main__":
     
     dynamic = IsaacGymDynamics()
     
-    model = TrackGroundModelVer7().to(device)
+    model = TrackSpaceModuleVer0(device=device).to(device)
     checkpoint = torch.load(args.param_load_path_track_simple, map_location=device)
     model.load_state_dict(checkpoint)
     # torch.manual_seed(args.seed)
 
     optimizer = optim.Adam(model.parameters(), lr=1e-4, eps=1e-5)
-    criterion = nn.MSELoss()
+    criterion = nn.MSELoss(reduction='none')
 
     total_sample = 0
     fail_sample = 0
-    
-    criterion = nn.MSELoss()
-    # with torch.no_grad():
-    for epoch in range(args.num_epoch):
-        print(f"Epoch {epoch} begin...")
-        
-        reset_buf = None
-        now_quad_state = envs.reset(reset_buf=reset_buf, reset_quad_state=None)
-        reset_buf = torch.zeros((args.batch_size,))
-        
-        tar_ori = torch.zeros((args.batch_size, 3)).to(device)
-        
-        not_reset_buf = torch.ones(args.batch_size).to(device)
 
-        for step in range(args.len_sample):
-            image = envs.get_camera_output()
-            action = model(now_quad_state[:, 3:], image)
+    tar_ori = torch.zeros((args.batch_size, 3)).to(device)
+    
+    with torch.no_grad():
+        for epoch in range(args.num_epoch):
+            print(f"Epoch {epoch} begin...")
             
-            new_state_dyn = dynamic(now_quad_state, action, envs.cfg.sim.dt)
-            new_state_sim, tar_state = envs.step(action)
-            tar_pos = tar_state[:, :3].detach()
-            loss, loss_direction, loss_speed, loss_ori, loss_h = velh_lossVer5(now_quad_state, tar_pos, 7, tar_ori)
+            reset_buf = None
+            now_quad_state = envs.reset(reset_buf=reset_buf, reset_quad_state=None)
+            reset_buf = torch.zeros((args.batch_size,))
             
-            now_quad_state = new_state_dyn
+            num_reset = 0
             
+            sum_loss = 0
+            num_loss = 0
             
-            if (step + 1) % 50 == 0:
+
+            for step in range(args.len_sample):
+
+                rel_dis = envs.get_relative_distance()
+                real_rel_dis = envs.get_future_relative_distance()
+                action, predict_rel_dis = model(now_quad_state[:, 3:], rel_dis, real_rel_dis)
+
+                new_state_dyn = dynamic(now_quad_state, action, envs.cfg.sim.dt)
+
+                new_state_sim, tar_state = envs.step(action)
+
+                tar_pos = tar_state[:, :3].detach()
                 
-                loss.backward(not_reset_buf)
-                optimizer.step()
-                optimizer.zero_grad()
+                now_quad_state = new_state_dyn
                 
-                now_quad_state = envs.reset(reset_buf=reset_buf, reset_quad_state=now_quad_state).detach()
-            envs.reset(reset_buf=reset_buf, reset_quad_state=now_quad_state)
-            horizon_dis = torch.norm(now_quad_state[0, :2] - tar_pos[0, :2], dim=0, p=2)
-            vertical_dis = torch.abs(7 - now_quad_state[0, 2])
-            speed = torch.norm(now_quad_state[0, 3:6], dim=0, p=2)
-            writer.add_scalar('Horizon Distance', horizon_dis, step)
-            writer.add_scalar('Vertical Distance', vertical_dis, step)
-            writer.add_scalar('Total Loss', loss[0], step)
-            writer.add_scalar('Direction Loss', loss_direction[0], step)
-            writer.add_scalar('Speed Loss', loss_speed[0], step)
-            writer.add_scalar('Orientation Loss', loss_ori[0], step)
-            writer.add_scalar('Speed', speed, step)
-            if (step + 1) % 10 == 0:
-                print(f"    Step {step}: tar_pos = {tar_pos[0]}, now_pos = {now_quad_state[0, :3]}, now_evl = {now_quad_state[0, 6:9]}, action = {action[0]}")
-            
-            
-            
-            if not step % 10:
-                file_name = f'tmp{step}.png'
-                envs.save_camera_output(file_name=file_name, file_path='/home/zim/Documents/python/AGAPG-main/aerial_gym/scripts/camera_output/frames/')
-        break
+                
+                if (step + 1) % 50 == 0:
+                    print("~~~~~~~~~~~~~~~~")
+                    print("State of dynamic: ", new_state_dyn[0])
+                    print("State of simulator", new_state_sim[0])   
+                    reset_buf, reset_idx = envs.check_reset_out()
+                    if len(reset_idx):
+                        print(f"On step {step}, reset {reset_idx}")
+                    not_reset_buf = torch.logical_not(reset_buf)
+                    num_reset += len(reset_idx)
+
+                    
+
+                    loss, loss_direction, loss_h, loss_ori, loss_intent = space_lossVer0(now_quad_state, predict_rel_dis, real_rel_dis, tar_pos, 7, tar_ori, criterion)
+                    
+
+                    ave_loss = torch.sum(torch.mul(not_reset_buf, loss)) / (args.batch_size - len(reset_idx))
+                    sum_loss += ave_loss
+                    num_loss += args.batch_size - len(reset_idx)
+
+                    now_quad_state = now_quad_state.detach()
+                
+
+                if (step + 1) % 50 == 0:
+                    now_quad_state = envs.reset(reset_buf=reset_buf, reset_quad_state=now_quad_state).detach()
+
+
+                    ave_loss_direction = torch.sum(loss_direction) / args.batch_size
+                    
+                    ave_loss_ori = torch.sum(loss_ori) / args.batch_size
+                    ave_loss_h = torch.sum(loss_h) / args.batch_size
+                    ave_loss_intent = torch.sum(loss_intent) / args.batch_size
+                    ave_loss = torch.sum(loss) / args.batch_size
+                    
+                    writer.add_scalar('Ave Loss', sum_loss / num_loss, epoch)
+                    writer.add_scalar('Loss', ave_loss.item(), epoch)
+                    writer.add_scalar('Loss Direction', ave_loss_direction.item(), epoch)
+                    writer.add_scalar('Loss Intent', ave_loss_intent.item(), epoch)
+                    writer.add_scalar('Loss Orientation', ave_loss_ori.item(), epoch)
+                    writer.add_scalar('Loss Height', ave_loss_h.item(), epoch)
+                    writer.add_scalar('Number Reset', num_reset, epoch)
+                    if (step + 1) % 10 == 0:
+                        print(f"    Step {step}: tar_pos = {tar_pos[0]}, now_pos = {now_quad_state[0, :3]}, now_evl = {now_quad_state[0, 6:9]}, action = {action[0]}")
+                
+                
+                
+                # if not step % 10:
+                #     file_name = f'tmp{step}.png'
+                #     envs.save_camera_output(file_name=file_name, file_path='/home/zim/Documents/python/AGAPG-main/aerial_gym/scripts/camera_output/frames/')
+            break
     print("Testing Complete!")
             
 
