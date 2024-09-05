@@ -2,13 +2,15 @@ import torch.nn as nn
 import torch
 import torch.nn.functional as F
 
-def space_lossVer1(quad_state, tar_state, predicted_rel_dis, real_rel_dis, tar_pos, tar_h, tar_ori, criterion):
+def space_lossVer4(quad_state, tar_state, tar_pos, tar_h, tar_ori):
     """
-    Added speed constrain to prevent drone from flying ahead of the target
+    In last version model doesn't converge as well. Tring to delet latent intend part
     """
+    pos = quad_state[:, :3]
     ori = quad_state[:, 3:6]
     vel = quad_state[:, 6:9]
 
+    tar_pos = tar_state[:, :3]
     tar_vel = tar_state[:, 6:9]
 
     z_coords = torch.full((quad_state.size(0), 1), tar_h, dtype=quad_state.dtype, device=quad_state.device)
@@ -16,11 +18,43 @@ def space_lossVer1(quad_state, tar_state, predicted_rel_dis, real_rel_dis, tar_p
     
     hor_dis = (tar_pos[:, :2] - quad_state[:, :2])
     norm_hor_dis = torch.norm(hor_dis, dim=1, p=2)
-    norm_hor_vel = torch.norm(vel[:, :2], dim=1, p=2)
+    # norm_hor_vel = torch.norm(vel[:, :2], dim=1, p=2)
     tmp_norm_dis = torch.clamp(norm_hor_dis, max=5)
 
+    # loss_distance = torch.norm(pos[:, :2] - tar_pos[:, :2], dim=1, p=2)
     loss_direction = (1 - F.cosine_similarity(hor_dis, vel[:, :2])) * tmp_norm_dis
-    loss_speed = torch.abs(torch.norm(tar_vel[:, :2], dim=1, p=2) - norm_hor_vel)
+    loss_speed = torch.norm(vel[:, :2] - tar_vel[:, :2], dim=1, p=2)
+    loss_h = torch.abs(quad_state[:, 2] - tar_h)
+    loss_ori = torch.norm(tar_ori - ori, dim=1, p=2)
+    # print("Predicted relative distance size:", predicted_rel_dis.size())
+    # print("Real relative distance size:", real_rel_dis.size())
+    # print("loss_intent size:", loss_intent.size())
+
+    return 0.5 * loss_direction + 0.05 * loss_speed + 0.3 * loss_h + 0.15 * loss_ori, loss_direction, loss_speed, loss_h, loss_ori
+
+
+def space_lossVer3(quad_state, tar_state, predicted_rel_dis, real_rel_dis, tar_pos, tar_h, tar_ori, criterion):
+    """
+    In last version model doesn't converge. Replace distance loss with velocity direction loss as experiment.
+    """
+    pos = quad_state[:, :3]
+    ori = quad_state[:, 3:6]
+    vel = quad_state[:, 6:9]
+
+    tar_pos = tar_state[:, :3]
+    tar_vel = tar_state[:, 6:9]
+
+    z_coords = torch.full((quad_state.size(0), 1), tar_h, dtype=quad_state.dtype, device=quad_state.device)
+    tar_pos = torch.cat((tar_pos[:, :2], z_coords), dim=1)
+    
+    hor_dis = (tar_pos[:, :2] - quad_state[:, :2])
+    norm_hor_dis = torch.norm(hor_dis, dim=1, p=2)
+    # norm_hor_vel = torch.norm(vel[:, :2], dim=1, p=2)
+    tmp_norm_dis = torch.clamp(norm_hor_dis, max=5)
+
+    # loss_distance = torch.norm(pos[:, :2] - tar_pos[:, :2], dim=1, p=2)
+    loss_direction = (1 - F.cosine_similarity(hor_dis, vel[:, :2])) * tmp_norm_dis
+    loss_speed = torch.norm(vel[:, :2] - tar_vel[:, :2], dim=1, p=2)
     loss_h = torch.abs(quad_state[:, 2] - tar_h)
     loss_ori = torch.norm(tar_ori - ori, dim=1, p=2)
     # print("Predicted relative distance size:", predicted_rel_dis.size())
@@ -29,7 +63,72 @@ def space_lossVer1(quad_state, tar_state, predicted_rel_dis, real_rel_dis, tar_p
     loss_intent = torch.mean(loss_intent, dim=1)
     # print("loss_intent size:", loss_intent.size())
 
-    return 0.35 * loss_direction + 0.2 * loss_speed + 0.3 * loss_h + 0.05 * loss_ori + 0.1 * loss_intent, loss_direction, loss_speed, loss_h, loss_ori, loss_intent
+    return 0.4 * loss_direction + 0.05 * loss_speed + 0.3 * loss_h + 0.15 * loss_ori + 0.1 * loss_intent, loss_direction, loss_speed, loss_h, loss_ori, loss_intent
+
+
+def space_lossVer2(quad_state, tar_state, predicted_rel_dis, real_rel_dis, tar_pos, tar_h, tar_ori, criterion):
+    """
+    Added speed constrain to prevent drone from flying ahead of the target
+    """
+    pos = quad_state[:, :3]
+    ori = quad_state[:, 3:6]
+    vel = quad_state[:, 6:9]
+
+    tar_pos = tar_state[:, :3]
+    tar_vel = tar_state[:, 6:9]
+
+    z_coords = torch.full((quad_state.size(0), 1), tar_h, dtype=quad_state.dtype, device=quad_state.device)
+    tar_pos = torch.cat((tar_pos[:, :2], z_coords), dim=1)
+    
+    hor_dis = (tar_pos[:, :2] - quad_state[:, :2])
+    norm_hor_dis = torch.norm(hor_dis, dim=1, p=2)
+    # norm_hor_vel = torch.norm(vel[:, :2], dim=1, p=2)
+    tmp_norm_dis = torch.clamp(norm_hor_dis, max=5)
+
+    loss_distance = torch.norm(pos[:, :2] - tar_pos[:, :2], dim=1, p=2)
+    loss_speed = torch.norm(vel[:, :2] - tar_vel[:, :2], dim=1, p=2)
+    loss_h = torch.abs(quad_state[:, 2] - tar_h)
+    loss_ori = torch.norm(tar_ori - ori, dim=1, p=2)
+    # print("Predicted relative distance size:", predicted_rel_dis.size())
+    # print("Real relative distance size:", real_rel_dis.size())
+    loss_intent = torch.mean(criterion(predicted_rel_dis, real_rel_dis), dim=1)
+    loss_intent = torch.mean(loss_intent, dim=1)
+    # print("loss_intent size:", loss_intent.size())
+
+    return 0.2 * loss_distance + 0.25 * loss_speed + 0.3 * loss_h + 0.15 * loss_ori + 0.1 * loss_intent, loss_distance, loss_speed, loss_h, loss_ori, loss_intent
+
+
+def space_lossVer1(quad_state, tar_state, predicted_rel_dis, real_rel_dis, tar_pos, tar_h, tar_ori, criterion):
+    """
+    Added speed constrain to prevent drone from flying ahead of the target
+    """
+    pos = quad_state[:, :3]
+    ori = quad_state[:, 3:6]
+    vel = quad_state[:, 6:9]
+
+    tar_pos = tar_state[:, :3]
+    tar_vel = tar_state[:, 6:9]
+
+    z_coords = torch.full((quad_state.size(0), 1), tar_h, dtype=quad_state.dtype, device=quad_state.device)
+    tar_pos = torch.cat((tar_pos[:, :2], z_coords), dim=1)
+    
+    hor_dis = (tar_pos[:, :2] - quad_state[:, :2])
+    norm_hor_dis = torch.norm(hor_dis, dim=1, p=2)
+    # norm_hor_vel = torch.norm(vel[:, :2], dim=1, p=2)
+    tmp_norm_dis = torch.clamp(norm_hor_dis, max=5)
+
+    loss_distance = torch.norm(pos[:, :2] - tar_pos[:, :2])
+    loss_direction = (1 - F.cosine_similarity(hor_dis, vel[:, :2])) * tmp_norm_dis
+    loss_speed = torch.norm(vel[:, :2] - tar_vel[:, :2], dim=1, p=2)
+    loss_h = torch.abs(quad_state[:, 2] - tar_h)
+    loss_ori = torch.norm(tar_ori - ori, dim=1, p=2)
+    # print("Predicted relative distance size:", predicted_rel_dis.size())
+    # print("Real relative distance size:", real_rel_dis.size())
+    loss_intent = torch.mean(criterion(predicted_rel_dis, real_rel_dis), dim=1)
+    loss_intent = torch.mean(loss_intent, dim=1)
+    # print("loss_intent size:", loss_intent.size())
+
+    return 0.15 * loss_distance + 0.25 * loss_direction + 0.15 * loss_speed + 0.3 * loss_h + 0.05 * loss_ori + 0.1 * loss_intent, loss_distance, loss_direction, loss_speed, loss_h, loss_ori, loss_intent
 
 
 def space_lossVer0(quad_state, predicted_rel_dis, real_rel_dis, tar_pos, tar_h, tar_ori, criterion):

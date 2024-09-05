@@ -31,7 +31,6 @@ class MyDynamics:
 
         # NUMPY PARAMETERS
         self.mass = self.cfg["mass"]
-        self.arm_length = self.cfg["arm_length"]
         self.kinv_ang_vel_tau = np.array(self.cfg["kinv_ang_vel_tau"])
 
         # self.inertia_vector = (
@@ -202,7 +201,8 @@ class IsaacGymDynamics(MyDynamics):
         angular_velocity = state[:, 9:]
 
         # action is normalized between -1 and 1 --> rescale
-        total_thrust = action[:, 0] * (20 * self.mass * (-self.torch_gravity[2])) + self.mass * (-self.torch_gravity[2])
+        # total_thrust = action[:, 0] * (20 * self.mass * (-self.torch_gravity[2])) + self.mass * (-self.torch_gravity[2])
+        total_thrust = action[:, 0] * 7.5 + self.mass * (-self.torch_gravity[2])
         body_rates = action[:, 1:] * .5
 
         # ctl_dt ist simulation time,
@@ -231,7 +231,8 @@ class IsaacGymDynamics(MyDynamics):
         angular_velocity = state[:, 9:]
 
         # action is normalized between -1 and 1 --> rescale
-        total_thrust = action[:, 0] * (20 * self.mass * (-self.torch_gravity[2])) + self.mass * (-self.torch_gravity[2])
+        # total_thrust = action[:, 0] * (20 * self.mass * (-self.torch_gravity[2])) + self.mass * (-self.torch_gravity[2])
+        total_thrust = action[:, 0] * 7.5 + self.mass * (-self.torch_gravity[2])
         body_rates = action[:, 1:] * .5
 
         # ctl_dt ist simulation time,

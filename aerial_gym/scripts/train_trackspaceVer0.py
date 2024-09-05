@@ -19,8 +19,8 @@ import sys
 sys.path.append('/home/zim/Documents/python/VTT')
 # print(sys.path)
 from aerial_gym.envs import *
-from aerial_gym.utils import task_registry, space_lossVer0
-from aerial_gym.models import TrackSpaceModuleVer0
+from aerial_gym.utils import task_registry, space_lossVer0, space_lossVer1, space_lossVer2, space_lossVer4, velh_lossVer5
+from aerial_gym.models import TrackSpaceModuleVer1, TrackSpaceModuleVer2
 from aerial_gym.envs import IsaacGymDynamics
 # os.path.basename(__file__).rstrip(".py")
 def get_args():
@@ -112,9 +112,9 @@ if __name__ == "__main__":
 
     dynamic = IsaacGymDynamics()
     
-    model = TrackSpaceModuleVer0(device=device).to(device)
-    # checkpoint = torch.load(args.param_load_path_track_simple, map_location=device)
-    # model.load_state_dict(checkpoint)
+    model = TrackSpaceModuleVer2(device=device).to(device)
+    checkpoint = torch.load(args.param_load_path_track_simple, map_location=device)
+    model.load_state_dict(checkpoint)
 
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, eps=1e-5)
     criterion = nn.MSELoss(reduction='none')
@@ -139,10 +139,14 @@ if __name__ == "__main__":
         # train
         for step in range(args.len_sample):
             
-            rel_dis = envs.get_relative_distance()
-            real_rel_dis = envs.get_future_relative_distance()
+            # rel_dis = envs.get_relative_distance()
+            tar_state = envs.get_tar_state()
+            rel_dis = now_quad_state[:, :3] - tar_state[:, :3]
+            
+            # real_rel_dis = envs.get_future_relative_distance()
 
-            action, predict_rel_dis = model(now_quad_state[:, 3:], rel_dis, real_rel_dis)
+            # action = model(now_quad_state[:, 3:], rel_dis, real_rel_dis)
+            action = model(now_quad_state[:, 3:], rel_dis)
             if torch.isnan(action).any():
                 print("Nan detected!!!")
                 exit(0)
@@ -173,8 +177,9 @@ if __name__ == "__main__":
 
                 
 
-                loss, loss_direction, loss_h, loss_ori, loss_intent = space_lossVer0(now_quad_state, predict_rel_dis, real_rel_dis, tar_pos, 7, tar_ori, criterion)
-                
+                # loss, loss_direction, loss_speed, loss_h, loss_ori, loss_intent = space_lossVer2(now_quad_state, tar_state, predict_rel_dis, real_rel_dis, tar_pos, 7, tar_ori, criterion)
+                # loss, loss_direction, loss_speed, loss_h, loss_ori = space_lossVer4(now_quad_state, tar_state, tar_pos, 7, tar_ori)
+                loss, loss_direction, loss_speed, loss_ori, loss_h = velh_lossVer5(now_quad_state, tar_pos, 7, tar_ori)
                 loss.backward(not_reset_buf)
                 ave_loss = torch.sum(torch.mul(not_reset_buf, loss)) / (args.batch_size - len(reset_idx))
                 sum_loss += ave_loss
@@ -184,21 +189,23 @@ if __name__ == "__main__":
                 optimizer.zero_grad()
                 now_quad_state = now_quad_state.detach()
             
-
+            if (step + 1) % 50 == 0:
                 now_quad_state = envs.reset(reset_buf=reset_buf, reset_quad_state=now_quad_state).detach()
+                reset_buf  = reset_buf * 0
 
 
-        ave_loss_direction = torch.sum(loss_direction) / args.batch_size
-        
+        ave_loss_distance = torch.sum(loss_direction) / args.batch_size
+        ave_loss_speed = torch.sum(loss_speed) / args.batch_size
         ave_loss_ori = torch.sum(loss_ori) / args.batch_size
         ave_loss_h = torch.sum(loss_h) / args.batch_size
-        ave_loss_intent = torch.sum(loss_intent) / args.batch_size
+        # ave_loss_intent = torch.sum(loss_intent) / args.batch_size
         ave_loss = torch.sum(loss) / args.batch_size
         
         writer.add_scalar('Ave Loss', sum_loss / num_loss, epoch)
         writer.add_scalar('Loss', ave_loss.item(), epoch)
-        writer.add_scalar('Loss Direction', ave_loss_direction.item(), epoch)
-        writer.add_scalar('Loss Intent', ave_loss_intent.item(), epoch)
+        writer.add_scalar('Loss Distance', ave_loss_distance.item(), epoch)
+        writer.add_scalar('Loss Speed', ave_loss_speed.item(), epoch)
+        # writer.add_scalar('Loss Intent', ave_loss_intent.item(), epoch)
         writer.add_scalar('Loss Orientation', ave_loss_ori.item(), epoch)
         writer.add_scalar('Loss Height', ave_loss_h.item(), epoch)
         writer.add_scalar('Number Reset', num_reset, epoch)

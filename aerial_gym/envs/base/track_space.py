@@ -146,7 +146,7 @@ class TrackSpaceVer0(BaseTask):
         tar_asset_file = os.path.basename(tar_asset_path)
 
         asset_options = asset_class_to_AssetOptions(self.cfg.robot_asset)
-        asset_options.override_inertia = True
+        # asset_options.override_inertia = 
         tar_asset_options = asset_class_to_AssetOptions(self.cfg.tar_asset)
 
         robot_asset = self.gym.load_asset(
@@ -228,6 +228,8 @@ class TrackSpaceVer0(BaseTask):
         self.robot_mass = 0
         for prop in self.robot_body_props:
             self.robot_mass += prop.mass
+            # print(dir(prop.inertia))
+            # print("Inertia: ", prop.inertia.x, prop.inertia.y, prop.inertia.z, prop.mass)
         print("Total robot mass: ", self.robot_mass)
         
         print("\n\n\n\n\n ENVIRONMENT CREATED \n\n\n\n\n\n")
@@ -244,17 +246,17 @@ class TrackSpaceVer0(BaseTask):
             self.post_physics_step()
 
         # set position
-        self.tar_root_states[range(self.num_envs), 0:3] = self.tar_traj[range(self.num_envs), self.count_step[range(self.num_envs)], :3]
-        self.tar_root_states[:, 2] = 0.2
-        # set linearvels
-        self.tar_root_states[:, 7:10] = self.tar_traj[range(self.num_envs), self.count_step[range(self.num_envs)], 6:9]
-        # set angvels
-        self.tar_root_states[:, 10:13] = 0
-        # set quats
-        self.tar_root_states[:, 3:7] = 0
-        self.tar_root_states[:, 6] = 2
+        # self.tar_root_states[range(self.num_envs), 0:3] = self.tar_traj[range(self.num_envs), self.count_step[range(self.num_envs)], :3]
+        # self.tar_root_states[:, 2] = 0.2
+        # # set linearvels
+        # self.tar_root_states[:, 7:10] = self.tar_traj[range(self.num_envs), self.count_step[range(self.num_envs)], 6:9]
+        # # set angvels
+        # self.tar_root_states[:, 10:13] = 0
+        # # set quats
+        # self.tar_root_states[:, 3:7] = 0
+        # self.tar_root_states[:, 6] = 2
         
-        self.gym.set_actor_root_state_tensor(self.sim, self.root_tensor)
+        # self.gym.set_actor_root_state_tensor(self.sim, self.root_tensor)
         self.render(sync_frame_time=False)
         
         self.progress_buf += 1
@@ -292,7 +294,8 @@ class TrackSpaceVer0(BaseTask):
         self.root_states[env_ids] = self.initial_root_states[env_ids]
         # reset position
         # print(self.count_step.size(), self.tar_traj.size(),env_ids)
-        self.root_states[env_ids, 0:3] = self.tar_traj[env_ids, self.count_step[env_ids], :3]
+        # self.root_states[env_ids, 0:3] = self.tar_traj[env_ids, self.count_step[env_ids], :3]
+        self.root_states[env_ids, 0:2] = rand_circle_point(num_resets, 5, self.device)
         self.root_states[env_ids, 2] = 7
         # reset linevels
         self.root_states[env_ids, 7:10] = 0
@@ -309,7 +312,8 @@ class TrackSpaceVer0(BaseTask):
         # self.tar_root_states[env_ids, 0:3] = torch.tensor([self.tar_traj[idx, self.count_step[idx], :3] for idx in env_ids])
         # for idx in env_ids:
         #     self.tar_root_states[idx, 0:3] = self.tar_traj[idx, self.count_step[idx], :3]
-        self.tar_root_states[env_ids, 0:3] = self.tar_traj[env_ids, self.count_step[env_ids], :3]
+        # self.tar_root_states[env_ids, 0:3] = self.tar_traj[env_ids, self.count_step[env_ids], :3]
+        self.tar_root_states[env_ids, 0:3] = 0
         self.tar_root_states[env_ids, 2] = 0.3
 
         # reset linevels
@@ -419,7 +423,7 @@ class TrackSpaceVer0(BaseTask):
         # new_state_ag[3] = quat_axis(self.root_quats, 0)[0, 0] # orientation
         new_state_ag[:, 6:9] = obs[:, 7:10] # linear acceleration
         new_state_ag[:, 9:12] = obs[:, 10:13] # angular acceleration
-        return new_state_ag
+        return new_state_ag.detach()
 
     def get_tar_state(self):
         self.compute_tar_observations()
@@ -429,7 +433,7 @@ class TrackSpaceVer0(BaseTask):
         new_state_tar[:, 3:6] = self.qua2euler(obs[:, 3:7]) # orientation
         new_state_tar[:, 6:9] = obs[:, 7:10] # linear acceleration
         new_state_tar[:, 9:12] = obs[:, 10:13] # angular acceleration
-        return new_state_tar
+        return new_state_tar.detach()
 
     def check_out_sight(self):
         # """Must call compute_observations and compute_tar_observations before"""
@@ -509,6 +513,7 @@ class TrackSpaceVer0(BaseTask):
         
         self.tar_traj = next(self.tar_traj_iter)
         while self.tar_traj.size(0) < self.num_envs:
+            print("Skip one data for limit number")
             self.tar_traj = next(self.tar_traj_iter)
 
     def get_relative_distance(self):

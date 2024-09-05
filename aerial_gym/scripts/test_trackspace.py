@@ -153,12 +153,13 @@ if __name__ == "__main__":
                 tar_pos = tar_state[:, :3].detach()
                 
                 now_quad_state = new_state_dyn
-                
+                if (step) % 50 == 0:
+                    print(f"Step{step}, After: ~~~~~~~~~~~~~~~~")
+                    print("State of dynamic: ", new_state_dyn[0])
+                    print("State of simulator", new_state_sim[0]) 
                 
                 if (step + 1) % 50 == 0:
-                    print("~~~~~~~~~~~~~~~~")
-                    print("State of dynamic: ", new_state_dyn[0])
-                    print("State of simulator", new_state_sim[0])   
+  
                     reset_buf, reset_idx = envs.check_reset_out()
                     if len(reset_idx):
                         print(f"On step {step}, reset {reset_idx}")
@@ -178,8 +179,10 @@ if __name__ == "__main__":
                 
 
                 if (step + 1) % 50 == 0:
+                    print(f"Step{step}, Before: ~~~~~~~~~~~~~~~~")
+                    print("State of dynamic: ", new_state_dyn[0])
+                    print("State of simulator", new_state_sim[0]) 
                     now_quad_state = envs.reset(reset_buf=reset_buf, reset_quad_state=now_quad_state).detach()
-
 
                     ave_loss_direction = torch.sum(loss_direction) / args.batch_size
                     
@@ -195,8 +198,8 @@ if __name__ == "__main__":
                     writer.add_scalar('Loss Orientation', ave_loss_ori.item(), epoch)
                     writer.add_scalar('Loss Height', ave_loss_h.item(), epoch)
                     writer.add_scalar('Number Reset', num_reset, epoch)
-                    if (step + 1) % 10 == 0:
-                        print(f"    Step {step}: tar_pos = {tar_pos[0]}, now_pos = {now_quad_state[0, :3]}, now_evl = {now_quad_state[0, 6:9]}, action = {action[0]}")
+                    # if (step + 1) % 10 == 0:
+                    #     print(f"    Step {step}: tar_pos = {tar_pos[0]}, now_pos = {now_quad_state[0, :3]}, now_evl = {now_quad_state[0, 6:9]}, action = {action[0]}")
                 
                 
                 

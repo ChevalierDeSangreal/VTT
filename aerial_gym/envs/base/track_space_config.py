@@ -53,7 +53,7 @@ class TrackSpaceCfg(BaseConfig):
         collision_mask = 1 # 1 to disable, 0 to enable...bitwise filter
         replace_cylinder_with_capsule = False # replace collision cylinders with capsules, leads to faster/more stable simulation
         flip_visual_attachments = True # Some .obj meshes must be flipped from y-up to z-up
-        density = 604.902897
+        density = 636.6218096573364
         angular_damping = 0.
         linear_damping = 0.
         max_angular_velocity = 200.
@@ -73,7 +73,7 @@ class TrackSpaceCfg(BaseConfig):
         collision_mask = 1 # 1 to disable, 0 to enable...bitwise filter
         replace_cylinder_with_capsule = False # replace collision cylinders with capsules, leads to faster/more stable simulation
         flip_visual_attachments = True # Some .obj meshes must be flipped from y-up to z-up
-        density = 604.902897
+        density = 636.6218096573364
         angular_damping = 0.
         linear_damping = 0.
         max_angular_velocity = 200.
