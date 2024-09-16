@@ -145,8 +145,8 @@ class TrackSpaceModuleVer2(nn.Module):
     """
     Added Bn and replace ReLU with ELU
     """
-    def __init__(self, input_size=12, hidden_size1=256, hidden_size2=256, hidden_size3=256, hidden_size4=256, hidden_size5=256, output_size=4, device='cpu'):
-        print("TrackGroundModel Initializing...")
+    def __init__(self, input_size=12, hidden_size1=64, hidden_size2=128, hidden_size3=256, hidden_size4=128, hidden_size5=64, output_size=4, device='cpu'):
+        print("TrackSpaceModel Initializing...")
 
         super(TrackSpaceModuleVer2, self).__init__()
         self.hidden_layer1 = nn.Linear(input_size, hidden_size1).to(device)
@@ -174,16 +174,12 @@ class TrackSpaceModuleVer2(nn.Module):
         
         x = torch.cat((now_state, rel_dis), dim=1)
         x = self.hidden_layer1(x)
-        # x = self.batch_norm1(x)
         x = self.activation1(x)
         x = self.hidden_layer2(x)
-        # x = self.batch_norm2(x)
         x = self.activation2(x)
         x = self.hidden_layer3(x)
-        # x = self.batch_norm3(x)
         x = self.activation3(x)
         x = self.hidden_layer4(x)
-        # x = self.batch_norm4(x)
         x = self.activation4(x)
         x = self.hidden_layer5(x)
         x = self.batch_norm5(x)

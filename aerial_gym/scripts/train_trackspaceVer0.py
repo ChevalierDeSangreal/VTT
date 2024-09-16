@@ -14,12 +14,11 @@ from torch.utils.tensorboard import SummaryWriter
 
 import pytz
 from datetime import datetime
-
 import sys
 sys.path.append('/home/zim/Documents/python/VTT')
 # print(sys.path)
 from aerial_gym.envs import *
-from aerial_gym.utils import task_registry, space_lossVer0, space_lossVer1, space_lossVer2, space_lossVer4, velh_lossVer5
+from aerial_gym.utils import task_registry, velh_lossVer5
 from aerial_gym.models import TrackSpaceModuleVer1, TrackSpaceModuleVer2
 from aerial_gym.envs import IsaacGymDynamics
 # os.path.basename(__file__).rstrip(".py")
@@ -30,7 +29,7 @@ def get_args():
         {"name": "--headless", "action": "store_true", "help": "Force display off at all times"},
         {"name": "--horovod", "action": "store_true", "default": False, "help": "Use horovod for multi-gpu training"},
         {"name": "--num_envs", "type": int, "default": 8, "help": "Number of environments to create. Batch size will be equal to this"},
-        {"name": "--seed", "type": int, "default": 41232, "help": "Random seed. Overrides config file if provided."},
+        {"name": "--seed", "type": int, "default": 42, "help": "Random seed. Overrides config file if provided."},
 
         # train setting
         {"name": "--learning_rate", "type":float, "default": 5.6e-5,
@@ -113,8 +112,8 @@ if __name__ == "__main__":
     dynamic = IsaacGymDynamics()
     
     model = TrackSpaceModuleVer2(device=device).to(device)
-    checkpoint = torch.load(args.param_load_path_track_simple, map_location=device)
-    model.load_state_dict(checkpoint)
+    # checkpoint = torch.load(args.param_load_path_track_simple, map_location=device)
+    # model.load_state_dict(checkpoint)
 
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, eps=1e-5)
     criterion = nn.MSELoss(reduction='none')
@@ -191,7 +190,7 @@ if __name__ == "__main__":
             
             if (step + 1) % 50 == 0:
                 now_quad_state = envs.reset(reset_buf=reset_buf, reset_quad_state=now_quad_state).detach()
-                reset_buf  = reset_buf * 0
+                # reset_buf  = reset_buf * 0
 
 
         ave_loss_distance = torch.sum(loss_direction) / args.batch_size
@@ -218,6 +217,6 @@ if __name__ == "__main__":
             print("Saving Model...")
             torch.save(model.state_dict(), args.param_save_path_track_simple)
     
-        envs.update_target_traj()
+        # envs.update_target_traj()
     writer.close()
     print("Training Complete!")

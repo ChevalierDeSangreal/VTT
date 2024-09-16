@@ -4,9 +4,7 @@ runs/
 *.pt
 *.tfevents*
 *.egg-info/
-resources/
 past_param_saved/
 scripts_saved/
-data/
 
 */__pycache__/

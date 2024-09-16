@@ -5,7 +5,6 @@ import os
 import random
 import time
 
-import gym
 import isaacgym  # noqa
 from isaacgym import gymutil
 from isaacgym.torch_utils import *
@@ -49,7 +48,7 @@ def get_args():
         #     "help": "length of a sample"},
         {"name": "--tmp", "type": bool, "default": True, "help": "Set false to officially save the trainning log"},
         # model setting
-        {"name": "--param_load_path_track_simple", "type":str, "default": '/home/zim/Documents/python/VTT/aerial_gym/param_saved/track_groundVer17Ver2.pth',
+        {"name": "--param_load_path_track_simple", "type":str, "default": '/home/zim/Documents/python/VTT/aerial_gym/param_saved/track_spaceVer0.pth',
             "help": "The path to model parameters"},
 
         # test setting

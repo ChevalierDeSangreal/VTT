@@ -10,6 +10,7 @@ from .base.track_ground_test import TrackGroundTest
 from .base.track_ground_config import TrackGroundCfg
 from .base.track_space_config import TrackSpaceCfg
 from .base.dynamics_isaac import IsaacGymDynamics
+from .base.dynamics_newton import NewtonDynamics
 from .base.track_space import TrackSpaceVer0
 from aerial_gym.utils.task_registry import task_registry
 

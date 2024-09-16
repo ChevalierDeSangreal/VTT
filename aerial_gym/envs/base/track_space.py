@@ -317,8 +317,8 @@ class TrackSpaceVer0(BaseTask):
         self.tar_root_states[env_ids, 2] = 0.3
 
         # reset linevels
-        # self.tar_root_states[env_ids, 7:10] = 0
-        self.tar_root_states[env_ids, 7:10] = self.tar_traj[env_ids, self.count_step[env_ids], 6:9]
+        self.tar_root_states[env_ids, 7:10] = 0
+        # self.tar_root_states[env_ids, 7:10] = self.tar_traj[env_ids, self.count_step[env_ids], 6:9]
         # reset angvels
         self.tar_root_states[env_ids, 10:13] = 0
         # reset quats
@@ -466,18 +466,6 @@ class TrackSpaceVer0(BaseTask):
 
         self.root_states.copy_(tmp_tar_state)
         
-    def reset_to(self, tar_state):
-        reset_idx = torch.arange(self.num_envs, device=self.device)
-        tar_state = tar_state.detach()
-        tmp_tar_state = torch.zeros((self.num_envs, 13)).to(self.device)
-        tmp_tar_state[reset_idx, :3] = tar_state[reset_idx, :3]
-        tmp_tar_state[reset_idx, 3:7] = self.euler2qua(tar_state[reset_idx, 3:6])
-        tmp_tar_state[reset_idx, 7:10] = tar_state[reset_idx, 6:9]
-        tmp_tar_state[reset_idx, 10:13] = tar_state[reset_idx, 9:12]
-
-        self.root_states.copy_(tmp_tar_state)
-
-        self.gym.set_actor_root_state_tensor(self.sim, self.root_tensor)
         
     def check_reset_out(self):
         dep_image = self.get_camera_dep_output()
@@ -490,9 +478,9 @@ class TrackSpaceVer0(BaseTask):
         ones = torch.ones_like(self.reset_buf)
         out_space = torch.zeros_like(self.reset_buf)
         obs = self.obs_buf.clone()
-        out_space = torch.where(torch.logical_or(obs[:, 0] > 10, obs[:, 0] < -10), ones, out_space)
-        out_space = torch.where(torch.logical_or(obs[:, 1] > 10, obs[:, 1] < -10), ones, out_space)
-        out_space = torch.where(torch.logical_or(obs[:, 2] > 10, obs[:, 2] < 0), ones, out_space)
+        out_space = torch.where(torch.logical_or(obs[:, 0] > 15, obs[:, 0] < -15), ones, out_space)
+        out_space = torch.where(torch.logical_or(obs[:, 1] > 15, obs[:, 1] < -15), ones, out_space)
+        out_space = torch.where(torch.logical_or(obs[:, 2] > 15, obs[:, 2] < 0), ones, out_space)
         out_space = torch.where(torch.any(torch.isnan(obs[:, :3]), dim=1).bool(), ones, out_space)
         out_space_idx = torch.nonzero(out_space).squeeze(-1)
         if len(out_space_idx):

@@ -201,8 +201,8 @@ class IsaacGymDynamics(MyDynamics):
         angular_velocity = state[:, 9:]
 
         # action is normalized between -1 and 1 --> rescale
-        # total_thrust = action[:, 0] * (20 * self.mass * (-self.torch_gravity[2])) + self.mass * (-self.torch_gravity[2])
-        total_thrust = action[:, 0] * 7.5 + self.mass * (-self.torch_gravity[2])
+        total_thrust = action[:, 0] * (2 * self.mass * (-self.torch_gravity[2])) + self.mass * (-self.torch_gravity[2])
+        # total_thrust = action[:, 0] * 7.5 + self.mass * (-self.torch_gravity[2])
         body_rates = action[:, 1:] * .5
 
         # ctl_dt ist simulation time,
@@ -231,8 +231,8 @@ class IsaacGymDynamics(MyDynamics):
         angular_velocity = state[:, 9:]
 
         # action is normalized between -1 and 1 --> rescale
-        # total_thrust = action[:, 0] * (20 * self.mass * (-self.torch_gravity[2])) + self.mass * (-self.torch_gravity[2])
-        total_thrust = action[:, 0] * 7.5 + self.mass * (-self.torch_gravity[2])
+        total_thrust = action[:, 0] * (2 * self.mass * (-self.torch_gravity[2])) + self.mass * (-self.torch_gravity[2])
+        # total_thrust = action[:, 0] * 7.5 + self.mass * (-self.torch_gravity[2])
         body_rates = action[:, 1:] * .5
 
         # ctl_dt ist simulation time,
@@ -257,7 +257,7 @@ class IsaacGymDynamics(MyDynamics):
         acceleration = self.linear_dynamics(force, attitude, velocity)
 
         position = (
-            position + 0.5 * dt * dt * acceleration + 0.5 * dt * velocity
+            position + 0.5 * dt * dt * acceleration + dt * velocity
         )
         velocity = velocity + dt * acceleration
 

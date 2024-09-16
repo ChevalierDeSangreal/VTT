@@ -16,7 +16,7 @@ class TrackSpaceCfg(BaseConfig):
         num_observations = 13
         get_privileged_obs = False # if True the states of all entitites in the environment will be returned as privileged observations, otherwise None will be returned
         num_actions = 4
-        env_spacing = 10
+        env_spacing = 15
         episode_length_s = 8 # episode length in seconds
         num_control_steps_per_env_step = 1 # number of physics steps per env step
         max_sample_length = 10000
