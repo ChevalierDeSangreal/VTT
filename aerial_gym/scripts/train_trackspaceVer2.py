@@ -2,6 +2,9 @@ import os
 import random
 import time
 
+# os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
+
 import isaacgym  # noqa
 from isaacgym import gymutil
 from isaacgym.torch_utils import *
@@ -12,7 +15,6 @@ import torch.optim as optim
 from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
 
-import os
 import random
 import time
 
@@ -29,7 +31,7 @@ from torch.utils.tensorboard import SummaryWriter
 import pytz
 from datetime import datetime
 import sys
-sys.path.append('/home/zim/Documents/python/VTT')
+sys.path.append('/home/wangzimo/VTT/VTT')
 # print(sys.path)
 from aerial_gym.envs import *
 from aerial_gym.utils import task_registry, velh_lossVer5
@@ -41,7 +43,7 @@ torch.autograd.set_detect_anomaly(True)
 """
     On the base of Ver1
     Back Propagate in every step
-    Parameter saved in /home/zim/Documents/python/VTT/aerial_gym/param_saved/track_spaceVer1.pth
+    Parameter saved in /home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_spaceVer1.pth
 """
 
 
@@ -72,9 +74,9 @@ def get_args():
             "help": "learning rate will decrease every step_size steps"},
 
         # model setting
-        {"name": "--param_save_path", "type":str, "default": '/home/zim/Documents/python/VTT/aerial_gym/param_saved/track_spaceVer0.pth',
+        {"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_spaceVer0.pth',
             "help": "The path to model parameters"},
-        {"name": "--param_load_path", "type":str, "default": '/home/zim/Documents/python/VTT/aerial_gym/param_saved/track_spaceVer0.pth',
+        {"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_spaceVer0.pth',
             "help": "The path to model parameters"},
         
         ]
@@ -116,12 +118,12 @@ if __name__ == "__main__":
     
     if args.tmp:
         run_name = 'tmp_' + run_name
-    writer = SummaryWriter(f"/home/zim/Documents/python/VTT/aerial_gym/runs/{run_name}")
+    writer = SummaryWriter(f"/home/wangzimo/VTT/VTT/aerial_gym/runs/{run_name}")
     writer.add_text(
         "hyperparameters",
         "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
     )
-
+    # args.headless = True
 
     device = args.sim_device
     print("using device:", device)
@@ -160,7 +162,6 @@ if __name__ == "__main__":
         
         # train
         for step in range(args.len_sample):
-            
             # rel_dis = envs.get_relative_distance()
             tar_state = envs.get_tar_state().detach()
             rel_dis = now_quad_state[:, :3] - tar_state[:, :3]

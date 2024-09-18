@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch
 import torchvision.models as models
-from torchsummary import summary
 from .resnet import Resnet
 
 class TrackGroundModel(nn.Module):
@@ -350,4 +349,4 @@ if __name__ == "__main__":
     # print(alexnet)
     
     resnet = Resnet()
-    summary(resnet.to("cuda:0"), input_size=(3, 227, 227))
+    # summary(resnet.to("cuda:0"), input_size=(3, 227, 227))
