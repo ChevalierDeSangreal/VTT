@@ -1,1 +1,1 @@
-{"duration": 10, "train_split": 0.9, "freq_x": 0.9, "freq_y": 0.7, "freq_z": 0.7, "out_dir": "/home/zim/Documents/python/VTT/aerial_gym/data", "traj_len": 2000}
+{"duration": 10, "train_split": 0.9, "freq_x": 0.9, "freq_y": 0.7, "freq_z": 0.7, "out_dir": "/home/wangzimo/VTT/VTT/aerial_gym/data", "traj_len": 2000}

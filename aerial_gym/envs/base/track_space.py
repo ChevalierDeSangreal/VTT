@@ -14,7 +14,7 @@
 """
 import numpy as np
 import os
-# os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 import torch
 from torch.utils.data import DataLoader
 from pytorch3d.transforms import quaternion_to_matrix, matrix_to_euler_angles, euler_angles_to_matrix, matrix_to_quaternion
@@ -110,7 +110,7 @@ class TrackSpaceVer0(BaseTask):
             self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
 
         # init dataset
-        self.tar_traj_dataset = TargetDataset('/home/zim/Documents/python/VTT/aerial_gym/data', self.device)
+        self.tar_traj_dataset = TargetDataset('/home/wangzimo/VTT/VTT/aerial_gym/data', self.device)
         self.tar_traj_dataloader = DataLoader(self.tar_traj_dataset, batch_size=self.num_envs, shuffle=True)
         self.tar_traj_iter = itertools.cycle(self.tar_traj_dataloader)
         self.tar_traj = next(self.tar_traj_iter)
@@ -123,10 +123,14 @@ class TrackSpaceVer0(BaseTask):
     def create_sim(self):
         self.sim = self.gym.create_sim(
             self.sim_device_id, self.graphics_device_id, self.physics_engine, self.sim_params)
+        
         self._create_ground_plane()
+        
         self._create_envs()
+        
         self.progress_buf = torch.zeros(
             self.cfg.env.num_envs, device=self.sim_device, dtype=torch.long)
+        
 
     def _create_ground_plane(self):
         plane_params = gymapi.PlaneParams()
@@ -171,7 +175,7 @@ class TrackSpaceVer0(BaseTask):
         self.camera_dep_root_tensors = []
         self.tar_seg_ids = []
         tar_seg_id_count = 114
-
+        
         for i in range(self.num_envs):
             # create env instance
             env_handle = self.gym.create_env(
@@ -184,18 +188,21 @@ class TrackSpaceVer0(BaseTask):
             self.robot_actor_index = self.gym.get_actor_index(env_handle, actor_handle, gymapi.IndexDomain.DOMAIN_ENV)
             self.robot_body_index = self.gym.get_actor_rigid_body_index(env_handle, actor_handle, 0, gymapi.IndexDomain.DOMAIN_ENV)
             self.robot_body_handle = self.gym.get_actor_rigid_body_handle(env_handle, actor_handle, 0)
-
+            
             # Create Cemara
             camera_properties = gymapi.CameraProperties()
             camera_properties.width = 224
             camera_properties.height = 224
             camera_properties.enable_tensors = True
+            
             camera_handle = self.gym.create_camera_sensor(env_handle, camera_properties)
+            
             camera_offset = gymapi.Vec3(0, 0, -0.2)
             camera_rotation = gymapi.Quat.from_axis_angle(gymapi.Vec3(0, 1, 0), np.deg2rad(90))
+            
             self.gym.attach_camera_to_body(camera_handle, env_handle, self.robot_body_handle, gymapi.Transform(camera_offset, camera_rotation), gymapi.FOLLOW_POSITION)
             self.camera_handles.append(camera_handle)
-
+            
             camera_tensor = self.gym.get_camera_image_gpu_tensor(self.sim, env_handle, camera_handle, gymapi.IMAGE_COLOR)
             torch_camera_tensor = gymtorch.wrap_tensor(camera_tensor)
             self.camera_root_tensors.append(torch_camera_tensor)
@@ -205,7 +212,7 @@ class TrackSpaceVer0(BaseTask):
             self.camera_dep_root_tensors.append(torch_camera_dep_tensor)
 
             
-
+            
             pos = torch.tensor([0, 0, 0.2], device=self.device)
             start_pose.p = gymapi.Vec3(*pos)
             tar_actor_handle = self.gym.create_actor(
@@ -399,12 +406,14 @@ class TrackSpaceVer0(BaseTask):
         self.gym.start_access_image_tensors(self.sim)
         tmp_camera_root_tensors = torch.stack(self.camera_root_tensors)
         self.gym.end_access_image_tensors(self.sim)
+        # print("!!!!!!camera device:", tmp_camera_root_tensors)
         return tmp_camera_root_tensors
     
     def get_camera_dep_output(self):
         self.gym.start_access_image_tensors(self.sim)
         tmp_camera_dep_root_tensors = torch.stack(self.camera_dep_root_tensors)
         self.gym.end_access_image_tensors(self.sim)
+        # print(tmp_camera_dep_root_tensors.device)
         return tmp_camera_dep_root_tensors
 
     def save_camera_output(self, file_name="tmp.png", file_path="/home/lab929/wzm/FYP/AGAPG/aerial_gym/scripts/camera_output/"):
@@ -468,8 +477,10 @@ class TrackSpaceVer0(BaseTask):
         
         
     def check_reset_out(self):
-        dep_image = self.get_camera_dep_output()
+        dep_image = self.get_camera_dep_output().to(device=self.device)
         sum_dep_image = torch.sum(dep_image, dim=(1, 2))
+        # print(sum_dep_image)
+        # print(torch.tensor(1, device=self.device), torch.tensor(0, device=self.device))
         out_sight = torch.where(sum_dep_image == 0, torch.tensor(1, device=self.device), torch.tensor(0, device=self.device)).squeeze(-1)
         out_sight_idx = torch.nonzero(out_sight).squeeze(-1)
         if len(out_sight_idx):
@@ -492,6 +503,7 @@ class TrackSpaceVer0(BaseTask):
             print("out_time:", out_time_idx)
         
         reset_buf = torch.logical_or(out_space, torch.logical_or(out_sight, out_time))
+        # reset_buf = out_space
         reset_idx = torch.nonzero(reset_buf).squeeze(-1)
         
         

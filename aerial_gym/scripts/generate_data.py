@@ -3,7 +3,7 @@ import time
 import os
 import json
 import sys
-sys.path.append('/home/zim/Documents/python/VTT')
+sys.path.append('/home/wangzimo/VTT/VTT')
 
 import casadi as cs
 import matplotlib.pyplot as plt
@@ -507,7 +507,7 @@ def make_dataset(num_traj):
         "freq_x": 0.9,
         "freq_y": 0.7,
         "freq_z": 0.7,
-        "out_dir": "/home/zim/Documents/python/VTT/aerial_gym/data",
+        "out_dir": "/home/wangzimo/VTT/VTT/aerial_gym/data",
     }
 
     cutoff = int(num_traj * config["train_split"])
@@ -569,7 +569,7 @@ def full_state_training_data(
     counter = 0
     while counter < len_data:
         traj = load_prepare_trajectory(
-            "/home/zim/Documents/python/VTT/aerial_gym/data", dt, speed_factor, test=0
+            "/home/wangzimo/VTT/VTT/aerial_gym/data", dt, speed_factor, test=0
         )[:, :ref_size]
         traj_cut = traj[:-(ref_length + 1)]
         # select every xth sample as the current drone state

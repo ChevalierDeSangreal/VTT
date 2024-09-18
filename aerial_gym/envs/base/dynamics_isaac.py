@@ -24,7 +24,7 @@ class MyDynamics:
         # update with modified parameters
         self.cfg.update(modified_params)
 
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
         torch.cuda.set_device(device)
         self.device = device
         
@@ -108,7 +108,7 @@ class MyDynamics:
         Cr = torch.cos(roll)
         Sr = torch.sin(roll)
 
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
         zero_vec_bs = torch.zeros(Sp.size()).to(device)
         ones_vec_bs = torch.ones(Sp.size()).to(device)
 
@@ -199,7 +199,7 @@ class IsaacGymDynamics(MyDynamics):
         attitude = state[:, 3:6]
         velocity = state[:, 6:9]
         angular_velocity = state[:, 9:]
-
+        # print(self.mass.device, action.device, self.torch_gravity.device)
         # action is normalized between -1 and 1 --> rescale
         total_thrust = action[:, 0] * (2 * self.mass * (-self.torch_gravity[2])) + self.mass * (-self.torch_gravity[2])
         # total_thrust = action[:, 0] * 7.5 + self.mass * (-self.torch_gravity[2])
@@ -231,6 +231,7 @@ class IsaacGymDynamics(MyDynamics):
         angular_velocity = state[:, 9:]
 
         # action is normalized between -1 and 1 --> rescale
+        
         total_thrust = action[:, 0] * (2 * self.mass * (-self.torch_gravity[2])) + self.mass * (-self.torch_gravity[2])
         # total_thrust = action[:, 0] * 7.5 + self.mass * (-self.torch_gravity[2])
         body_rates = action[:, 1:] * .5
