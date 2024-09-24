@@ -5,6 +5,53 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 from .resnet import Resnet
 
+class TrackSpaceModuleVer3(nn.Module):
+    """
+    Change the output of model from attitude level control to desired acceleration.
+    """
+    def __init__(self, input_size=12, hidden_size1=64, hidden_size2=128, hidden_size3=256, hidden_size4=128, hidden_size5=64, output_size=3, device='cpu'):
+        print("TrackSpaceModel Initializing...")
+
+        super(TrackSpaceModuleVer3, self).__init__()
+        self.hidden_layer1 = nn.Linear(input_size, hidden_size1).to(device)
+        self.activation1 = nn.ELU().to(device)
+        self.hidden_layer2 = nn.Linear(hidden_size1, hidden_size2).to(device)
+        self.activation2 = nn.ELU().to(device)
+        self.hidden_layer3 = nn.Linear(hidden_size2, hidden_size3).to(device)
+        self.activation3 = nn.ELU().to(device)
+        self.hidden_layer4 = nn.Linear(hidden_size3, hidden_size4).to(device)
+        self.activation4 = nn.ELU().to(device)
+        self.hidden_layer5 = nn.Linear(hidden_size4, hidden_size5).to(device)
+        self.batch_norm5 = nn.BatchNorm1d(hidden_size5).to(device)
+        self.activation5 = nn.ELU().to(device)
+        self.output_layer = nn.Linear(hidden_size5, output_size).to(device)
+
+        torch.nn.init.kaiming_normal_(self.hidden_layer1.weight)
+        torch.nn.init.kaiming_normal_(self.hidden_layer2.weight)
+        torch.nn.init.kaiming_normal_(self.hidden_layer3.weight)
+        torch.nn.init.kaiming_normal_(self.hidden_layer4.weight)
+        torch.nn.init.kaiming_normal_(self.hidden_layer5.weight)
+        torch.nn.init.kaiming_normal_(self.output_layer.weight)
+
+
+    def forward(self, now_state, rel_dis):
+        
+        x = torch.cat((now_state, rel_dis), dim=1)
+        x = self.hidden_layer1(x)
+        x = self.activation1(x)
+        x = self.hidden_layer2(x)
+        x = self.activation2(x)
+        x = self.hidden_layer3(x)
+        x = self.activation3(x)
+        x = self.hidden_layer4(x)
+        x = self.activation4(x)
+        x = self.hidden_layer5(x)
+        x = self.batch_norm5(x)
+        x = self.activation5(x)
+        x = self.output_layer(x)
+        x = torch.sigmoid(x) * 2 - 1
+        return x
+
 class MyMLP(nn.Module):
 
     def __init__(self, input_size=16, hidden_size1=256, hidden_size2=256, hidden_size3=256, hidden_size4=256, output_size=4, device='cpu'):

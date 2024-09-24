@@ -9,9 +9,12 @@ from .base.track_ground import TrackGroundVer7
 from .base.track_ground_test import TrackGroundTest
 from .base.track_ground_config import TrackGroundCfg
 from .base.track_space_config import TrackSpaceCfg
+from .base.track_space_config2 import TrackSpaceCfgVer2
 from .base.dynamics_isaac import IsaacGymDynamics
 from .base.dynamics_newton import NewtonDynamics
+from .base.dynamics_simple import SimpleDynamics, NRSimpleDynamics
 from .base.track_space import TrackSpaceVer0
+from .base.track_spaceVer2 import TrackSpaceVer2
 from aerial_gym.utils.task_registry import task_registry
 
 # task_registry.register( "quad", AerialRobot, AerialRobotCfg())
@@ -19,3 +22,4 @@ from aerial_gym.utils.task_registry import task_registry
 task_registry.register( "track_spaceVer0", TrackSpaceVer0, TrackSpaceCfg())
 task_registry.register( "track_groundVer7", TrackGroundVer7, TrackGroundCfg())
 task_registry.register( "track_ground_test", TrackGroundTest, TrackGroundCfg())
+task_registry.register( "track_spaceVer2", TrackSpaceVer2, TrackSpaceCfgVer2())

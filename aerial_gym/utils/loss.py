@@ -1,6 +1,70 @@
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
+import copy
+
+class Loss:
+    def __init__(self, batch_size, device):
+        self.device = device
+        self.batch_size = batch_size
+
+        self.direction = torch.zeros(batch_size, device=device)
+        self.speed = torch.zeros(batch_size, device=device)
+        self.h = torch.zeros(batch_size, device=device)
+        self.acc = torch.zeros(batch_size, device=device)
+        self.jerk = torch.zeros(batch_size, device=device)
+        self.ori = torch.zeros(batch_size, device=device)
+
+    
+
+def space_lossVer5(loss:Loss, quad_state, acceleration, last_acceleration, tar_state, tar_h, tar_ori, step, dt):
+    """
+    Refering to Back to Newton...
+
+    """
+    vel = quad_state[:, 6:9]
+    ori = quad_state[:, 3:6]
+
+    
+    z_coords = torch.full((quad_state.size(0), 1), tar_h, dtype=quad_state.dtype, device=quad_state.device)
+    tar_pos = torch.cat((tar_state[:, :2].clone(), z_coords), dim=1)
+    
+    hor_dis = (tar_pos[:, :2].clone() - quad_state[:, :2].clone())
+    
+    norm_hor_dis = torch.norm(hor_dis, dim=1, p=2)
+    norm_hor_vel = torch.norm(vel[:, :2].clone(), dim=1, p=2)
+    
+    tmp_norm_dis = torch.clamp(norm_hor_dis, max=5)
+
+    new_loss = Loss(loss.batch_size, loss.device)
+
+    loss_direction = (1 - F.cosine_similarity(hor_dis, vel[:, :2].clone())) * tmp_norm_dis
+    new_loss.direction = (loss.direction * step + loss_direction) / (step + 1)
+
+    loss_speed = torch.abs(tmp_norm_dis - norm_hor_vel)
+    new_loss.speed = (loss.speed * step + loss_speed) / (step + 1)
+    
+    loss_h = torch.abs(quad_state[:, 2] - tar_h)
+    new_loss.h = (loss.h * step + loss_h) / (step + 1)
+    
+    loss_ori = torch.norm(tar_ori - ori, dim=1, p=2)
+    new_loss.ori = (loss.ori * step + loss_ori) / (step + 1)
+
+    loss_acc = torch.norm(acceleration, dim=1, p=2)
+    new_loss.acc = (loss.acc * step + loss_acc) / (step + 1)
+
+    loss_jerk = torch.norm((acceleration - last_acceleration) / dt, dim=1, p=2)
+    new_loss.jerk = (loss.jerk * step + loss_jerk) / (step + 1)
+
+    # print(f"loss.direction[-1]:", loss.direction[-1])
+    loss_final = 0.4 * new_loss.direction + 0.299 * new_loss.speed + 0.2 * new_loss.h + 0.1 * new_loss.ori + 0.0009 * new_loss.acc + 0.0001 * new_loss.jerk
+    # loss_final = loss_direction
+    # print(f"loss_final shape:{loss_final.shape}, {0.4 * loss.direction[-1]}")
+    # loss_final = new_loss.speed
+
+    return loss_final, new_loss
+
+
 
 def space_lossVer4(quad_state, tar_state, tar_pos, tar_h, tar_ori):
     """
