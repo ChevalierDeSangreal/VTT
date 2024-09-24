@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/home/wangzimo/VTT/VTT')
+sys.path.append('/home/zim/Documents/python/VTT')
 import numpy as np
 import casadi as ca
 import torch

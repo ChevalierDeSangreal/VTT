@@ -19,7 +19,7 @@ import sys
 from datetime import datetime
 import pytz
 
-sys.path.append('/home/wangzimo/VTT/VTT')
+sys.path.append('/home/zim/Documents/python/VTT')
 # print(sys.path)
 from aerial_gym.envs import *
 from aerial_gym.utils import task_registry, velh_loss, velh_lossVer2, velh_lossVer3, velh_lossVer5
@@ -48,7 +48,7 @@ def get_args():
         #     "help": "length of a sample"},
         {"name": "--tmp", "type": bool, "default": True, "help": "Set false to officially save the trainning log"},
         # model setting
-        {"name": "--param_load_path_track_simple", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_spaceVer0.pth',
+        {"name": "--param_load_path_track_simple", "type":str, "default": '/home/zim/Documents/python/VTT/aerial_gym/param_saved/track_spaceVer0.pth',
             "help": "The path to model parameters"},
 
         # test setting

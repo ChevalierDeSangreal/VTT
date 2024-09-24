@@ -110,7 +110,7 @@ class TrackSpaceVer0(BaseTask):
             self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
 
         # init dataset
-        self.tar_traj_dataset = TargetDataset('/home/wangzimo/VTT/VTT/aerial_gym/data', self.device)
+        self.tar_traj_dataset = TargetDataset('/home/zim/Documents/python/VTT/aerial_gym/data', self.device)
         self.tar_traj_dataloader = DataLoader(self.tar_traj_dataset, batch_size=self.num_envs, shuffle=True)
         self.tar_traj_iter = itertools.cycle(self.tar_traj_dataloader)
         self.tar_traj = next(self.tar_traj_iter)

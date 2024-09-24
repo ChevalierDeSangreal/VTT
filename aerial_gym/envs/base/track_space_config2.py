@@ -87,7 +87,7 @@ class TrackSpaceCfgVer2(BaseConfig):
         lookat = [0, 0, 0]  # [m]
 
     class sim:
-        dt =  0.67
+        dt =  0.067
         substeps = 1
         gravity = [0., 0. , -9.81]  # [m/s^2]
         up_axis = 1  # 0 is y, 1 is z
