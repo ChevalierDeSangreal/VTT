@@ -7,6 +7,11 @@ import os
 import json
 from pathlib import Path
 
+"""
+On the base of dynamics_newton,
+Change Controller to high level.
+"""
+
 class MyDynamics:
 
     def __init__(self, modified_params={}):
@@ -132,57 +137,34 @@ class MyDynamics:
         # print("output euler rate", together.size())
         return torch.squeeze(together)
 
-
-class NewtonDynamics(MyDynamics):
+    @staticmethod
+    def vector_to_euler_angles(vectors):
+        vectors = vectors / torch.norm(vectors, dim=-1, keepdim=True)
+        
+        pitch = torch.atan2(vectors[..., 1], torch.sqrt(vectors[..., 0]**2 + vectors[..., 2]**2))
+        yaw = torch.atan2(vectors[..., 0], vectors[..., 2])
+        roll = torch.zeros_like(pitch)
+        
+        return torch.stack([roll, pitch, yaw], dim=-1)
+    
+class SimpleDynamics(MyDynamics):
 
     def __init__(self, modified_params={}):
         super().__init__(modified_params=modified_params)
         torch.cuda.set_device(self.device)
 
-    def linear_dynamics(self, force, attitude, velocity):
-        """
-        linear dynamics
-        no drag so far
-        """
+    def body_acc_to_world(self, acc, attitude):
 
+        
         world_to_body = self.world_to_body_matrix(attitude)
         body_to_world = torch.transpose(world_to_body, 1, 2)
+        # print(acc.shape, body_to_world.shape)
+        world_acc = torch.matmul(
+            body_to_world, torch.unsqueeze(acc, 2)
+        )
+        
+        return torch.squeeze(world_acc, 2)
 
-        # print("force in ld ", force.size())
-        thrust = 1 / self.mass * torch.matmul(
-            body_to_world, torch.unsqueeze(force, 2)
-        )
-        # print("thrust", thrust.size())
-        # drag = velocity * TODO: dynamics.drag_coeff??
-        thrust_min_grav = (
-            thrust[:, :, 0] + self.torch_gravity +
-            self.torch_translational_drag
-        )
-        return thrust_min_grav  # - drag
-
-    def run_flight_control(self, thrust, av, body_rates, cross_prod):
-        """
-        thrust: command first signal (around 9.81)
-        omega = av: current angular velocity
-        command = body_rates: body rates in command
-        """
-        force = torch.unsqueeze(thrust, 1)
-
-        # constants
-        omega_change = torch.unsqueeze(body_rates - av, 2)
-        kinv_times_change = torch.matmul(
-            self.torch_kinv_ang_vel_tau.to(self.device), omega_change.to(self.device)
-        )
-        first_part = torch.matmul(self.torch_inertia_J.to(self.device), kinv_times_change.to(self.device))
-        # print("first_part", first_part.size())
-        body_torque_des = (
-            first_part[:, :, 0] + cross_prod + self.torch_rotational_drag
-        )
-        # print(force.shape, body_torque_des.shape)
-        thrust_and_torque = torch.unsqueeze(
-            torch.cat((force, body_torque_des), dim=1), 2
-        )
-        return thrust_and_torque[:, :, 0]
 
     def _pretty_print(self, varname, torch_var):
         np.set_printoptions(suppress=1, precision=7)
@@ -192,33 +174,6 @@ class NewtonDynamics(MyDynamics):
 
     def __call__(self, state, action, dt):
         return self.simulate_quadrotor(action, state, dt)
-    
-    def control_quadrotor(self, action, state):
-        # extract state
-        position = state[:, :3]
-        attitude = state[:, 3:6]
-        velocity = state[:, 6:9]
-        angular_velocity = state[:, 9:]
-
-        # action is normalized between -1 and 1 --> rescale
-        total_thrust = action[:, 0] * (2 * self.mass * (-self.torch_gravity[2])) + self.mass * (-self.torch_gravity[2])
-        # total_thrust = action[:, 0] * 7.5 + self.mass * (-self.torch_gravity[2])
-        body_rates = action[:, 1:] * .5
-
-        # ctl_dt ist simulation time,
-        # remainer wird immer -sim_dt gemacht in jedem loop
-        # precompute cross product (batch, 3, 1)
-        # print(angular_velocity.shape)
-        inertia_av = torch.matmul(
-            self.torch_inertia_J.to(self.device), torch.unsqueeze(angular_velocity, 2)
-        )[:, :, 0]
-        cross_prod = torch.cross(angular_velocity, inertia_av, dim=1)
-
-        force_torques = self.run_flight_control(
-            total_thrust, angular_velocity, body_rates, cross_prod
-        ).to(self.device)
-        return force_torques
-        
 
     def simulate_quadrotor(self, action, state, dt):
         """
@@ -230,79 +185,79 @@ class NewtonDynamics(MyDynamics):
         velocity = state[:, 6:9]
         angular_velocity = state[:, 9:]
 
-        # action is normalized between -1 and 1 --> rescale
-        total_thrust = action[:, 0] * (2 * self.mass * (-self.torch_gravity[2])) + self.mass * (-self.torch_gravity[2])
-        # total_thrust = action[:, 0] * 7.5 + self.mass * (-self.torch_gravity[2])
-        body_rates = action[:, 1:] * .5
 
-        # ctl_dt ist simulation time,
-        # remainer wird immer -sim_dt gemacht in jedem loop
-        # precompute cross product (batch, 3, 1)
-        inertia_av = torch.matmul(
-            self.torch_inertia_J.to(self.device), torch.unsqueeze(angular_velocity, 2)
-        )[:, :, 0]
-        cross_prod = torch.cross(angular_velocity, inertia_av, dim=1)
-
-        force_torques = self.run_flight_control(
-            total_thrust, angular_velocity, body_rates, cross_prod
-        ).to(self.device)
-
-        # 1) linear dynamics
-        force_expanded = torch.unsqueeze(force_torques[:, 0], 1)
-        f_s = force_expanded.size()
-        force = torch.cat(
-            (torch.zeros(f_s).to(self.device), torch.zeros(f_s).to(self.device), force_expanded), dim=1
-        )
-
-        acceleration = self.linear_dynamics(force, attitude, velocity)
-
+        acceleration = self.body_acc_to_world(action, attitude)
+        # print(position.shape, acceleration.shape)
         position = (
             position * 0.9 + 0.1 * position.detach() + 0.5 * dt * dt * acceleration + dt * velocity
         )
         velocity = velocity * 0.9 + 0.1 * velocity.detach() + dt * acceleration
 
         # 2) angular acceleration
-        tau = force_torques[:, 1:]
-        torch_inertia_J_inv = torch.inverse(self.torch_inertia_J.to(self.device))
-        angular_acc = torch.matmul(
-            torch_inertia_J_inv.to(self.device), torch.unsqueeze((tau - cross_prod).to(self.device), 2)
-        )[:, :, 0]
-        new_angular_velocity = 0.9 * angular_velocity + 0.1 * angular_velocity.detach() + dt * angular_acc
 
-        # other option: use quaternion
-        # --> also slight error to flightmare, even when using euler, no idea why
-        # from neural_control.trajectory.q_funcs import (
-        #     q_dot_new, euler_to_quaternion, quaternion_to_euler
-        # )
-        # quaternion = euler_to_quaternion(
-        #     attitude[0, 0].item(), attitude[0, 1].item(), attitude[0, 2].item()
-        # )
-        # print("quaternion", quaternion)
-        # np.set_printoptions(suppress=1, precision=7)
-        # av_test = angular_velocity[0].numpy()
-        # quaternion_omega = np.array([av_test[0], av_test[1], av_test[2]])
-        # print("quaternion_omega", quaternion_omega)
-        # q_dot = q_dot_new(quaternion, quaternion_omega)
-        # print("q dot", q_dot)
-        # # integrate
-        # new_quaternion = quaternion + dt * q_dot
-        # print("new_quaternion", new_quaternion)
-        # new_quaternion = new_quaternion / np.linalg.norm(new_quaternion)
-        # print("new_quaternion", new_quaternion)
-        # new_euler = quaternion_to_euler(new_quaternion)
-        # print("new euler", new_euler)
-
-        # pretty_print("attitude before", attitude)
-
-        attitude = 0.9 * attitude + 0.1 * attitude.detach() + dt * self.euler_rate(attitude, angular_velocity)
+        attitude = self.vector_to_euler_angles(action)
 
         # set final state
         state = torch.hstack(
-            (position, attitude, velocity, new_angular_velocity)
+            (position, attitude, velocity, angular_velocity)
         )
-        return state.float()
+        return state.float(), acceleration
+
+class NRSimpleDynamics(MyDynamics):
+
+    def __init__(self, modified_params={}):
+        super().__init__(modified_params=modified_params)
+        torch.cuda.set_device(self.device)
+
+    def body_acc_to_world(self, acc, attitude):
+
+        
+        world_to_body = self.world_to_body_matrix(attitude)
+        body_to_world = torch.transpose(world_to_body, 1, 2)
+        # print(acc.shape, body_to_world.shape)
+        world_acc = torch.matmul(
+            body_to_world, torch.unsqueeze(acc, 2)
+        )
+        
+        return torch.squeeze(world_acc, 2)
 
 
+    def _pretty_print(self, varname, torch_var):
+        np.set_printoptions(suppress=1, precision=7)
+        if len(torch_var) > 1:
+            print("ERR: batch size larger 1", torch_var.size())
+        print(varname, torch_var[0].detach().numpy())
+
+    def __call__(self, state, action, dt):
+        return self.simulate_quadrotor(action, state, dt)
+
+    def simulate_quadrotor(self, action, state, dt):
+        """
+        Pytorch implementation of the dynamics in Flightmare simulator
+        """
+        # extract state
+        position = state[:, :3]
+        attitude = state[:, 3:6]
+        velocity = state[:, 6:9]
+        angular_velocity = state[:, 9:]
+
+
+        acceleration = self.body_acc_to_world(action, attitude)
+        # print(position.shape, acceleration.shape)
+        position = (
+            position + 0.5 * dt * dt * acceleration + dt * velocity
+        )
+        velocity = velocity + dt * acceleration
+
+        # 2) angular acceleration
+
+        attitude = self.vector_to_euler_angles(action)
+
+        # set final state
+        state = torch.hstack(
+            (position, attitude, velocity, angular_velocity)
+        )
+        return state.float(), acceleration
 
 
 
@@ -319,11 +274,9 @@ if __name__ == "__main__":
     ]
     state = torch.tensor([state, state]).to(device)
     # state = [2, 3, 4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    dyn = NewtonDynamics()
+    dyn = SimpleDynamics()
     new_state = dyn.simulate_quadrotor(
         action, state, 0.05
     )
-    action = dyn.control_quadrotor(action, state)
-    print("action", action)
     print("new state flightmare", new_state)
 

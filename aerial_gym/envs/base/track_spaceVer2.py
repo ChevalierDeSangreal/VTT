@@ -4,16 +4,14 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 """ 
-    Modified from TrackGroundVer7
-    Still tracking the object on the ground, hh
-    Target will randomly move according to prepared dataset
-    NOTICE: the number of steps shouldn't be larger than 1k
-    Because of the limitation of dataset
-    NOTICE: remeber to update_traj at the beginning of a epoch
+    Modified based on track_space.py
+    change dunamics to dynamics_simple
+    change dt to 0.67
 
 """
 import numpy as np
 import os
+import sys
 # os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 import torch
 from torch.utils.data import DataLoader
@@ -31,11 +29,11 @@ from aerial_gym.utils.math import rand_circle_point
 
 from aerial_gym.data.dataset import TargetDataset
 
-from aerial_gym.envs.base.dynamics_newton import NewtonDynamics
+from aerial_gym.envs.base.dynamics_simple import SimpleDynamics
 
 import itertools
 
-class TrackSpaceVer0(BaseTask):
+class TrackSpaceVer2(BaseTask):
 
     def __init__(self, cfg: TrackSpaceCfg, sim_params, physics_engine, sim_device, headless):
         self.cfg = cfg
@@ -98,7 +96,7 @@ class TrackSpaceVer0(BaseTask):
                                    dtype=torch.float32, device=self.device, requires_grad=False)
 
         # self.controller = Controller(self.cfg.control, self.device)
-        self.dynamics = NewtonDynamics()
+        self.dynamics = SimpleDynamics()
 
         if self.viewer:
             cam_pos_x, cam_pos_y, cam_pos_z = self.cfg.viewer.pos[0], self.cfg.viewer.pos[1], self.cfg.viewer.pos[2]
@@ -118,7 +116,37 @@ class TrackSpaceVer0(BaseTask):
         self.count_step = torch.zeros((self.num_envs, ), dtype=torch.long, device=self.device)
         
         
+    def render(self, sync_frame_time=True):
+        # print("##### 5.1")
+        # Fetch results
+        self.gym.fetch_results(self.sim, True) # use only when device is not "cpu"
+        # Step graphics. Skipping this causes the onboard robot camera tensors to not be updated
+        # print("##### 5.2")
+        # self.gym.step_graphics(self.sim)
+        # # print("##### 5.3")
+        # self.gym.render_all_camera_sensors(self.sim)
+        # print("##### 5.4")
+        # if viewer exists update it based on requirement
+        if self.viewer:
+            # print("##### 5.5")
+            # check for window closed
+            if self.gym.query_viewer_has_closed(self.viewer):
+                sys.exit()
 
+            # check for keyboard events
+            for evt in self.gym.query_viewer_action_events(self.viewer):
+                if evt.action == "QUIT" and evt.value > 0:
+                    sys.exit()
+                elif evt.action == "toggle_viewer_sync" and evt.value > 0:
+                    self.enable_viewer_sync = not self.enable_viewer_sync
+
+            # update viewer based on requirement
+            if self.enable_viewer_sync:
+                self.gym.draw_viewer(self.viewer, self.sim, True)
+                if sync_frame_time:
+                    self.gym.sync_frame_time(self.sim)
+            else:
+                self.gym.poll_viewer_events(self.viewer)
 
     def create_sim(self):
         self.sim = self.gym.create_sim(
@@ -241,16 +269,19 @@ class TrackSpaceVer0(BaseTask):
         
         print("\n\n\n\n\n ENVIRONMENT CREATED \n\n\n\n\n\n")
 
-    def step(self, actions):
+    def step(self, new_states):
 
 
         # step physics and render each frame
         for i in range(self.cfg.env.num_control_steps_per_env_step):
-            self.pre_physics_step(actions)
+            # print("##### 3")
+            self.pre_physics_step(new_states)
             self.gym.simulate(self.sim)
+            # print("##### 4")
             # NOTE: as per the isaacgym docs, self.gym.fetch_results must be called after self.gym.simulate, but not having it here seems to work fine
             # it is called in the render function.
             self.post_physics_step()
+            # print("##### 5")
 
         # set position
         # self.tar_root_states[range(self.num_envs), 0:3] = self.tar_traj[range(self.num_envs), self.count_step[range(self.num_envs)], :3]
@@ -265,33 +296,30 @@ class TrackSpaceVer0(BaseTask):
         
         # self.gym.set_actor_root_state_tensor(self.sim, self.root_tensor)
         self.render(sync_frame_time=False)
-        
         self.progress_buf += 1
         self.compute_observations()
         self.compute_tar_observations()
-
 
         self.time_out_buf = self.progress_buf > self.max_len_sample
         self.extras["time_outs"] = self.time_out_buf
         self.count_step += 1
 
-
+        
         return self.get_quad_state(), self.get_tar_state()
     
 
-    def reset(self, reset_buf=None, reset_quad_state=None):
+    def reset(self, reset_buf=None):
         """ Reset all robots"""
         if reset_buf is None:
             reset_idx = torch.arange(self.num_envs, device=self.device)
         else:
             reset_idx = torch.nonzero(reset_buf).squeeze(-1)
-        if reset_quad_state is not None:
-            self.set_reset_to(reset_quad_state)
+        # print("##### 12")
         if len(reset_idx):
             self.set_reset_idx(reset_idx)
-        if len(reset_idx) or (reset_quad_state is not None):
+            # print("##### 13")
             self.gym.set_actor_root_state_tensor(self.sim, self.root_tensor)
-        
+            # print("##### 14")
         return self.get_quad_state()
 
     def set_reset_idx(self, env_ids):
@@ -335,34 +363,23 @@ class TrackSpaceVer0(BaseTask):
         self.reset_buf[env_ids] = 0
         self.progress_buf[env_ids] = 0
         self.time_out_buf[env_ids] = 0
-        
 
 
-    def pre_physics_step(self, _actions):
+    def pre_physics_step(self, tar_state):
         # resets
         if self.counter % 250 == 0:
             print("self.counter:", self.counter)
         self.counter += 1
 
         
-        actions = _actions.to(self.device)
-        actions = tensor_clamp(
-            actions, self.action_lower_limits, self.action_upper_limits)
-        self.action_input[:] = actions
+        tmp_tar_state = torch.zeros((self.num_envs, 13)).to(self.device)
+        tmp_tar_state[:, :3] = tar_state[:, :3]
+        tmp_tar_state[:, 3:7] = self.euler2qua(tar_state[:, 3:6])
+        tmp_tar_state[:, 7:10] = tar_state[:, 6:9]
+        tmp_tar_state[:, 10:13] = tar_state[:, 9:12]
 
-        # clear actions for reset envs
-        self.forces[:] = 0.0
-        self.torques[:, :] = 0.0
-
-        force_torques = self.dynamics.control_quadrotor(self.action_input, self.get_quad_state())
-        output_thrusts_mass_normalized = force_torques[:, 0]
-        output_torques_inertia_normalized = force_torques[:, 1:]
-        self.forces[:, self.robot_body_index, 2] = output_thrusts_mass_normalized
-        self.torques[:, self.robot_body_index] = output_torques_inertia_normalized
-        # apply actions
-        self.gym.apply_rigid_body_force_tensors(self.sim, gymtorch.unwrap_tensor(
-            self.forces), gymtorch.unwrap_tensor(self.torques), gymapi.LOCAL_SPACE)
-        
+        self.root_states.copy_(tmp_tar_state)
+        self.gym.set_actor_root_state_tensor(self.sim, self.root_tensor)
 
 
     def post_physics_step(self):
@@ -477,15 +494,15 @@ class TrackSpaceVer0(BaseTask):
         
         
     def check_reset_out(self):
-        dep_image = self.get_camera_dep_output().to(device=self.device)
-        sum_dep_image = torch.sum(dep_image, dim=(1, 2))
+        # dep_image = self.get_camera_dep_output().to(device=self.device)
+        # sum_dep_image = torch.sum(dep_image, dim=(1, 2))
         # print(sum_dep_image)
         # print(torch.tensor(1, device=self.device), torch.tensor(0, device=self.device))
-        out_sight = torch.where(sum_dep_image == 0, torch.tensor(1, device=self.device), torch.tensor(0, device=self.device)).squeeze(-1)
-        out_sight_idx = torch.nonzero(out_sight).squeeze(-1)
-        if len(out_sight_idx):
-            print("out_sight:", out_sight_idx)
-        
+        # out_sight = torch.where(sum_dep_image == 0, torch.tensor(1, device=self.device), torch.tensor(0, device=self.device)).squeeze(-1)
+        # out_sight_idx = torch.nonzero(out_sight).squeeze(-1)
+        # if len(out_sight_idx):
+        #     print("out_sight:", out_sight_idx)
+        # print("##### 7")
         ones = torch.ones_like(self.reset_buf)
         out_space = torch.zeros_like(self.reset_buf)
         obs = self.obs_buf.clone()
@@ -496,14 +513,14 @@ class TrackSpaceVer0(BaseTask):
         out_space_idx = torch.nonzero(out_space).squeeze(-1)
         if len(out_space_idx):
             print("out_space:", out_space_idx)
-        
+        # print("##### 8")
         out_time = self.time_out_buf
         out_time_idx = torch.nonzero(out_time).squeeze(-1)
         if len(out_time_idx):
             print("out_time:", out_time_idx)
         
-        reset_buf = torch.logical_or(out_space, torch.logical_or(out_sight, out_time))
-        # reset_buf = out_space
+        # reset_buf = torch.logical_or(out_space, torch.logical_or(out_sight, out_time))
+        reset_buf = torch.logical_or(out_space, out_time)
         reset_idx = torch.nonzero(reset_buf).squeeze(-1)
         
         
