@@ -37,14 +37,14 @@ torch.autograd.set_detect_anomaly(True)
 def get_args():
     custom_parameters = [
         {"name": "--task", "type": str, "default": "track_spaceVer2", "help": "The name of the task."},
-        {"name": "--experiment_name", "type": str, "default": "simple_dynamicsVer3_reduction_1e4lr", "help": "Name of the experiment to run or load."},
+        {"name": "--experiment_name", "type": str, "default": "simple_dynamicsVer3_reduction", "help": "Name of the experiment to run or load."},
         {"name": "--headless", "action": "store_true", "help": "Force display off at all times"},
         {"name": "--horovod", "action": "store_true", "default": False, "help": "Use horovod for multi-gpu training"},
         {"name": "--num_envs", "type": int, "default": 1024, "help": "Number of environments to create. Batch size will be equal to this"},
         {"name": "--seed", "type": int, "default": 42, "help": "Random seed. Overrides config file if provided."},
 
         # train setting
-        {"name": "--learning_rate", "type":float, "default": 1.6e-4,
+        {"name": "--learning_rate", "type":float, "default": 5.6e-5,
             "help": "the learning rate of the optimizer"},
         {"name": "--batch_size", "type":int, "default": 1024,
             "help": "batch size of training. Notice that batch_size should be equal to num_envs"},
@@ -124,8 +124,8 @@ if __name__ == "__main__":
     dynamic = SimpleDynamics()
     
     model = TrackSpaceModuleVer4(device=device).to(device)
-    # checkpoint = torch.load(args.param_load_path, map_location=device)
-    # model.load_state_dict(checkpoint)
+    checkpoint = torch.load(args.param_load_path, map_location=device)
+    model.load_state_dict(checkpoint)
 
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, eps=1e-5)
     criterion = nn.MSELoss(reduction='none')
@@ -144,7 +144,7 @@ if __name__ == "__main__":
         reset_buf = None
         now_quad_state = envs.reset(reset_buf=reset_buf).detach()
 
-        reset_buf = torch.zeros((args.batch_size,))
+        reset_buf = torch.zeros((args.batch_size,), device=device)
         timer = torch.zeros((args.batch_size,), device=device)
         
         num_reset = 0
@@ -154,9 +154,10 @@ if __name__ == "__main__":
 
         loss = Loss(args.batch_size, device)
 
-        # start.record()
+        start.record()
         # train
         for step in range(args.len_sample):
+            # print(step)
             # rel_dis = envs.get_relative_distance()
             # print("##### 0")
             tar_state = envs.get_tar_state().detach()
@@ -174,13 +175,13 @@ if __name__ == "__main__":
             
             new_state_dyn, acceleration = dynamic(now_quad_state, action, envs.cfg.sim.dt)
             # print("##### 2")
-            if not step:
-                last_acceleration = acceleration
-            else:
-                last_acceleration[reset_idx] = acceleration[reset_idx]
+            # if not step:
+            last_acceleration = acceleration.clone()
+            # else:
+            #     last_acceleration[reset_idx] = acceleration[reset_idx]
             # new_state_dyn = torch.cat((action, action.clone().detach(), action.clone().detach()), dim=1)
 
-            new_state_sim, tar_state = envs.step(new_state_dyn.detach())
+            # new_state_sim, tar_state = envs.step(new_state_dyn.detach())
             # print("##### 6")
             tar_pos = tar_state[:, :3].detach()
             
@@ -195,54 +196,54 @@ if __name__ == "__main__":
             #         dis = torch.sum(torch.norm(tar_pos - now_quad_state[:, :3], p=2, dim=1)) / args.batch_size
 
             # if (step + 1) % 50 == 0:
-            reset_buf, reset_idx = envs.check_reset_out()
+            # reset_buf, reset_idx = envs.check_reset_out()
             # if len(reset_idx):
             #     print(f"On step {step}, reset {reset_idx}")
             not_reset_buf = torch.logical_not(reset_buf)
-            num_reset += len(reset_idx)
+            # num_reset += len(reset_idx)
 
                 
             # print("##### 9")
             loss_final, loss = space_lossVer5(loss, now_quad_state, acceleration, last_acceleration, tar_state, 7, tar_ori, timer, envs.cfg.sim.dt)
-            last_acceleration = acceleration
+            last_acceleration = acceleration.clone()
             # print(f"loss_final shape:{loss_final.shape}")
-            loss_final.backward(not_reset_buf, retain_graph=True)
+        loss_final.backward(not_reset_buf)
             # print("##### 10")
             # ave_loss = torch.sum(torch.mul(not_reset_buf, loss_final)) / (args.batch_size - len(reset_idx))
-            sum_loss += torch.sum(torch.mul(not_reset_buf, loss_final))
-            num_loss += args.batch_size - len(reset_idx)
+            # sum_loss += torch.sum(torch.mul(not_reset_buf, loss_final))
+            # num_loss += args.batch_size - len(reset_idx)
 
                 
             # print("##### 11")
-            now_quad_state[reset_idx] = envs.reset(reset_buf=reset_buf)[reset_idx].detach()
-            loss.reset(reset_idx=reset_idx)
-            timer = timer + 1
-            timer[reset_idx] = 0
+            # now_quad_state[reset_idx] = envs.reset(reset_buf=reset_buf)[reset_idx].detach()
+            # loss.reset(reset_idx=reset_idx)
+            # timer = timer + 1
+            # timer[reset_idx] = 0
 
         optimizer.step()
         optimizer.zero_grad()
-        # end.record()
-        # torch.cuda.synchronize()
-        # print(f"耗时: {start.elapsed_time(end)} 毫秒")
-        ave_loss_direciton = torch.sum(loss.direction.detach()) / args.batch_size
-        ave_loss_speed = torch.sum(loss.speed.detach()) / args.batch_size
-        ave_loss_ori = torch.sum(loss.ori.detach()) / args.batch_size
-        ave_loss_h = torch.sum(loss.h.detach()) / args.batch_size
-        # ave_loss_intent = torch.sum(loss_intent) / args.batch_size
-        ave_loss_final = torch.sum(loss_final.detach()) / args.batch_size
+        end.record()
+        torch.cuda.synchronize()
+        print(f"耗时: {start.elapsed_time(end)} 毫秒")
+        # ave_loss_direciton = torch.sum(loss.direction.detach()) / args.batch_size
+        # ave_loss_speed = torch.sum(loss.speed.detach()) / args.batch_size
+        # ave_loss_ori = torch.sum(loss.ori.detach()) / args.batch_size
+        # ave_loss_h = torch.sum(loss.h.detach()) / args.batch_size
+        # # ave_loss_intent = torch.sum(loss_intent) / args.batch_size
+        # ave_loss_final = torch.sum(loss_final.detach()) / args.batch_size
         
         
-        writer.add_scalar('Ave Loss', sum_loss / num_loss, epoch)
-        writer.add_scalar('Loss Final', ave_loss_final.item(), epoch)
-        writer.add_scalar('Loss Direction', ave_loss_direciton.item(), epoch)
-        writer.add_scalar('Loss Speed', ave_loss_speed.item(), epoch)
-        # writer.add_scalar('Loss Intent', ave_loss_intent.item(), epoch)
-        writer.add_scalar('Loss Orientation', ave_loss_ori.item(), epoch)
-        writer.add_scalar('Loss Height', ave_loss_h.item(), epoch)
-        writer.add_scalar('Number Reset', num_reset, epoch)
+        # writer.add_scalar('Ave Loss', sum_loss / num_loss, epoch)
+        # writer.add_scalar('Loss Final', ave_loss_final.item(), epoch)
+        # writer.add_scalar('Loss Direction', ave_loss_direciton.item(), epoch)
+        # writer.add_scalar('Loss Speed', ave_loss_speed.item(), epoch)
+        # # writer.add_scalar('Loss Intent', ave_loss_intent.item(), epoch)
+        # writer.add_scalar('Loss Orientation', ave_loss_ori.item(), epoch)
+        # writer.add_scalar('Loss Height', ave_loss_h.item(), epoch)
+        # writer.add_scalar('Number Reset', num_reset, epoch)
         # print("##### 17")
 
-        print(f"Epoch {epoch}, Ave loss = {sum_loss / num_loss}, num reset = {num_reset}")
+        # print(f"Epoch {epoch}, Ave loss = {sum_loss / num_loss}, num reset = {num_reset}")
 
         
         if (epoch + 1) % 50 == 0:

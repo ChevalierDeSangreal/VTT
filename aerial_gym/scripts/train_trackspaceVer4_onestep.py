@@ -21,7 +21,7 @@ import sys
 sys.path.append('/home/wangzimo/VTT/VTT')
 # print(sys.path)
 from aerial_gym.envs import *
-from aerial_gym.utils import task_registry, space_lossVer5, Loss, velh_lossVer5
+from aerial_gym.utils import task_registry, space_lossVer5, Loss, velh_lossVer5, space_lossVer4, velh_lossVer6
 from aerial_gym.models import TrackSpaceModuleVer4
 from aerial_gym.envs import SimpleDynamics, NRSimpleDynamics
 # os.path.basename(__file__).rstrip(".py")
@@ -37,22 +37,22 @@ torch.autograd.set_detect_anomaly(True)
 def get_args():
     custom_parameters = [
         {"name": "--task", "type": str, "default": "track_spaceVer2", "help": "The name of the task."},
-        {"name": "--experiment_name", "type": str, "default": "simple_dynamicsVer3_reduction_1e4lr", "help": "Name of the experiment to run or load."},
+        {"name": "--experiment_name", "type": str, "default": "simple_dynamics_5e5lr_1024b_1500epoch_onestep", "help": "Name of the experiment to run or load."},
         {"name": "--headless", "action": "store_true", "help": "Force display off at all times"},
         {"name": "--horovod", "action": "store_true", "default": False, "help": "Use horovod for multi-gpu training"},
         {"name": "--num_envs", "type": int, "default": 1024, "help": "Number of environments to create. Batch size will be equal to this"},
         {"name": "--seed", "type": int, "default": 42, "help": "Random seed. Overrides config file if provided."},
 
         # train setting
-        {"name": "--learning_rate", "type":float, "default": 1.6e-4,
+        {"name": "--learning_rate", "type":float, "default": 1.6e-5,
             "help": "the learning rate of the optimizer"},
         {"name": "--batch_size", "type":int, "default": 1024,
             "help": "batch size of training. Notice that batch_size should be equal to num_envs"},
         {"name": "--num_worker", "type":int, "default": 16,
             "help": "num worker of dataloader"},
-        {"name": "--num_epoch", "type":int, "default": 1502,
+        {"name": "--num_epoch", "type":int, "default": 5002,
             "help": "num of epoch"},
-        {"name": "--len_sample", "type":int, "default": 100,
+        {"name": "--len_sample", "type":int, "default": 150,
             "help": "length of a sample"},
         {"name": "--tmp", "type": bool, "default": False, "help": "Set false to officially save the trainning log"},
         {"name": "--gamma", "type":int, "default": 0.8,
@@ -63,7 +63,7 @@ def get_args():
         # model setting
         {"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_spaceVer0.pth',
             "help": "The path to model parameters"},
-        {"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_spaceVer0_simple_1500epoch_1024b_reduce.pth',
+        {"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_spaceVer0.pth',
             "help": "The path to model parameters"},
         
         ]
@@ -121,7 +121,7 @@ if __name__ == "__main__":
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
-    dynamic = SimpleDynamics()
+    dynamic = NRSimpleDynamics()
     
     model = TrackSpaceModuleVer4(device=device).to(device)
     # checkpoint = torch.load(args.param_load_path, map_location=device)
@@ -152,7 +152,6 @@ if __name__ == "__main__":
         sum_loss = 0
         num_loss = 0
 
-        loss = Loss(args.batch_size, device)
 
         # start.record()
         # train
@@ -174,16 +173,16 @@ if __name__ == "__main__":
             
             new_state_dyn, acceleration = dynamic(now_quad_state, action, envs.cfg.sim.dt)
             # print("##### 2")
-            if not step:
-                last_acceleration = acceleration
-            else:
-                last_acceleration[reset_idx] = acceleration[reset_idx]
             # new_state_dyn = torch.cat((action, action.clone().detach(), action.clone().detach()), dim=1)
 
             new_state_sim, tar_state = envs.step(new_state_dyn.detach())
+            envs.set_reset_to(new_state_dyn)
+            new_state_sim = envs.get_quad_state()
             # print("##### 6")
             tar_pos = tar_state[:, :3].detach()
-            
+            # print("Old State", now_quad_state[0])
+            # print("Simulator State", new_state_sim[0])
+            # print("Dynamics State:", new_state_dyn[0])
             
             now_quad_state = new_state_dyn
             
@@ -203,10 +202,12 @@ if __name__ == "__main__":
 
                 
             # print("##### 9")
-            loss_final, loss = space_lossVer5(loss, now_quad_state, acceleration, last_acceleration, tar_state, 7, tar_ori, timer, envs.cfg.sim.dt)
-            last_acceleration = acceleration
+            # loss_final, loss = space_lossVer5(loss, now_quad_state, acceleration, last_acceleration, tar_state, 7, tar_ori, timer, envs.cfg.sim.dt)
+            loss_final, loss_direction, loss_speed, loss_ori, loss_h = velh_lossVer6(now_quad_state, tar_state, 7, tar_ori, action)
+
+
             # print(f"loss_final shape:{loss_final.shape}")
-            loss_final.backward(not_reset_buf, retain_graph=True)
+            loss_final.backward(not_reset_buf)
             # print("##### 10")
             # ave_loss = torch.sum(torch.mul(not_reset_buf, loss_final)) / (args.batch_size - len(reset_idx))
             sum_loss += torch.sum(torch.mul(not_reset_buf, loss_final))
@@ -214,20 +215,31 @@ if __name__ == "__main__":
 
                 
             # print("##### 11")
-            now_quad_state[reset_idx] = envs.reset(reset_buf=reset_buf)[reset_idx].detach()
-            loss.reset(reset_idx=reset_idx)
+            if len(reset_idx):
+                # print("Before state:", now_quad_state[0])
+                now_quad_state = envs.reset(reset_buf=reset_buf).detach()
+                # print("After state:", now_quad_state[0])
+            else:
+                # print("?????????????")
+                now_quad_state = now_quad_state.detach()
+            # if reset_buf[0]:
+            #     print("Before state:", now_quad_state[0])
+            # now_quad_state = envs.reset(reset_buf=reset_buf).detach()
+            # if reset_buf[0]:
+            #     print("After state:", now_quad_state[0])
+
             timer = timer + 1
             timer[reset_idx] = 0
 
-        optimizer.step()
-        optimizer.zero_grad()
+            optimizer.step()
+            optimizer.zero_grad()
         # end.record()
         # torch.cuda.synchronize()
         # print(f"耗时: {start.elapsed_time(end)} 毫秒")
-        ave_loss_direciton = torch.sum(loss.direction.detach()) / args.batch_size
-        ave_loss_speed = torch.sum(loss.speed.detach()) / args.batch_size
-        ave_loss_ori = torch.sum(loss.ori.detach()) / args.batch_size
-        ave_loss_h = torch.sum(loss.h.detach()) / args.batch_size
+        ave_loss_direciton = torch.sum(loss_direction.detach()) / args.batch_size
+        ave_loss_speed = torch.sum(loss_speed.detach()) / args.batch_size
+        ave_loss_ori = torch.sum(loss_ori.detach()) / args.batch_size
+        ave_loss_h = torch.sum(loss_h.detach()) / args.batch_size
         # ave_loss_intent = torch.sum(loss_intent) / args.batch_size
         ave_loss_final = torch.sum(loss_final.detach()) / args.batch_size
         

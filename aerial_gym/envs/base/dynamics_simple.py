@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/home/zim/Documents/python/VTT')
+sys.path.append('/home/wangzimo/VTT/VTT')
 import numpy as np
 import casadi as ca
 import torch
@@ -139,7 +139,9 @@ class MyDynamics:
 
     @staticmethod
     def vector_to_euler_angles(vectors):
-        vectors = vectors / torch.norm(vectors, dim=-1, keepdim=True)
+        norm = torch.norm(vectors, dim=-1, keepdim=True)
+        norm = torch.where(norm == 0, torch.tensor(1e-8, dtype=norm.dtype), norm)
+        vectors = vectors / norm
         
         pitch = torch.atan2(vectors[..., 1], torch.sqrt(vectors[..., 0]**2 + vectors[..., 2]**2))
         yaw = torch.atan2(vectors[..., 0], vectors[..., 2])
@@ -184,9 +186,10 @@ class SimpleDynamics(MyDynamics):
         attitude = state[:, 3:6]
         velocity = state[:, 6:9]
         angular_velocity = state[:, 9:]
+        
 
-
-        acceleration = self.body_acc_to_world(action, attitude)
+        # acceleration = self.body_acc_to_world(action * 10, attitude)
+        acceleration = action * 10
         # print(position.shape, acceleration.shape)
         position = (
             position * 0.9 + 0.1 * position.detach() + 0.5 * dt * dt * acceleration + dt * velocity
@@ -241,8 +244,9 @@ class NRSimpleDynamics(MyDynamics):
         velocity = state[:, 6:9]
         angular_velocity = state[:, 9:]
 
-
-        acceleration = self.body_acc_to_world(action, attitude)
+        # Rescale acceleration output
+        # acceleration = self.body_acc_to_world(action * 10, attitude)
+        acceleration = action * 10
         # print(position.shape, acceleration.shape)
         position = (
             position + 0.5 * dt * dt * acceleration + dt * velocity
