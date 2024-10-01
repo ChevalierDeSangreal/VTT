@@ -15,23 +15,11 @@ import torch.optim as optim
 from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
 
-import random
-import time
-
-import isaacgym  # noqa
-from isaacgym import gymutil
-from isaacgym.torch_utils import *
-import numpy as np
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.distributions.normal import Normal
-from torch.utils.tensorboard import SummaryWriter
 
 import pytz
 from datetime import datetime
 import sys
-sys.path.append('/home/zim/Documents/python/VTT')
+sys.path.append('/home/wangzimo/VTT/VTT')
 # print(sys.path)
 from aerial_gym.envs import *
 from aerial_gym.utils import task_registry, space_lossVer5, Loss, velh_lossVer5
@@ -74,9 +62,9 @@ def get_args():
             "help": "learning rate will decrease every step_size steps"},
 
         # model setting
-        {"name": "--param_save_path", "type":str, "default": '/home/zim/Documents/python/VTT/aerial_gym/param_saved/track_spaceVer0.pth',
+        {"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_spaceVer0.pth',
             "help": "The path to model parameters"},
-        {"name": "--param_load_path", "type":str, "default": '/home/zim/Documents/python/VTT/aerial_gym/param_saved/track_spaceVer0_120epoch.pth',
+        {"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_spaceVer0_120epoch.pth',
             "help": "The path to model parameters"},
         
         ]
@@ -118,7 +106,7 @@ if __name__ == "__main__":
     
     if args.tmp:
         run_name = 'tmp_' + run_name
-    writer = SummaryWriter(f"/home/zim/Documents/python/VTT/aerial_gym/runs/{run_name}")
+    writer = SummaryWriter(f"/home/wangzimo/VTT/VTT/aerial_gym/runs/{run_name}")
     writer.add_text(
         "hyperparameters",
         "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
@@ -134,7 +122,7 @@ if __name__ == "__main__":
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
-    dynamic = NRSimpleDynamics()
+    dynamic = SimpleDynamics()
     
     model = TrackSpaceModuleVer3(device=device).to(device)
     # checkpoint = torch.load(args.param_load_path, map_location=device)
@@ -201,8 +189,8 @@ if __name__ == "__main__":
 
             # if (step + 1) % 50 == 0:
             reset_buf, reset_idx = envs.check_reset_out()
-            if len(reset_idx):
-                print(f"On step {step}, reset {reset_idx}")
+            # if len(reset_idx):
+            #     print(f"On step {step}, reset {reset_idx}")
             not_reset_buf = torch.logical_not(reset_buf)
             num_reset += len(reset_idx)
 
@@ -213,8 +201,8 @@ if __name__ == "__main__":
             # print(f"loss_final shape:{loss_final.shape}")
             loss_final.backward(not_reset_buf, retain_graph=True)
             # print("##### 10")
-            ave_loss = torch.sum(torch.mul(not_reset_buf, loss_final)) / (args.batch_size - len(reset_idx))
-            sum_loss += ave_loss
+            # ave_loss = torch.sum(torch.mul(not_reset_buf, loss_final)) / (args.batch_size - len(reset_idx))
+            sum_loss += torch.sum(torch.mul(not_reset_buf, loss_final))
             num_loss += args.batch_size - len(reset_idx)
 
                 
@@ -235,7 +223,7 @@ if __name__ == "__main__":
         
         writer.add_scalar('Ave Loss', sum_loss / num_loss, epoch)
         writer.add_scalar('Loss Final', ave_loss_final.item(), epoch)
-        writer.add_scalar('Loss Distance', ave_loss_direciton.item(), epoch)
+        writer.add_scalar('Loss Direction', ave_loss_direciton.item(), epoch)
         writer.add_scalar('Loss Speed', ave_loss_speed.item(), epoch)
         # writer.add_scalar('Loss Intent', ave_loss_intent.item(), epoch)
         writer.add_scalar('Loss Orientation', ave_loss_ori.item(), epoch)

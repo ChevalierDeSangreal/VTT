@@ -19,7 +19,7 @@ import sys
 from datetime import datetime
 import pytz
 
-sys.path.append('/home/zim/Documents/python/VTT')
+sys.path.append('/home/wangzimo/VTT/VTT')
 # print(sys.path)
 from aerial_gym.envs import *
 from aerial_gym.utils import task_registry, velh_loss, velh_lossVer2, velh_lossVer3, velh_lossVer5
@@ -48,12 +48,12 @@ def get_args():
         #     "help": "length of a sample"},
         {"name": "--tmp", "type": bool, "default": True, "help": "Set false to officially save the trainning log"},
         # model setting
-        {"name": "--param_load_path_track_simple", "type":str, "default": '/home/zim/Documents/python/AGAPG-main/aerial_gym/param_saved/track_groundVer17Ver2.pth',
+        {"name": "--param_load_path_track_simple", "type":str, "default": '/home/zim/Documents/python/AGAPG-main/aerial_gym/param_saved/track_spaceVer0.pth',
             "help": "The path to model parameters"},
 
         # test setting
         {"name": "--visual", "action": "store_true", "default": False, "help": "Whether use isaac gym to visual movement"},
-        {"name": "--batch_size", "type":int, "default": 8,  "help": "batch size of training. Notice that batch_size should be equal to num_envs"},
+        {"name": "--batch_size", "type":int, "default": 1024,  "help": "batch size of training. Notice that batch_size should be equal to num_envs"},
         {"name": "--num_epoch", "type":int, "default": 8, "help": "num of epoch"},
         {"name": "--num_worker", "type":int, "default": 4, "help": "num worker of dataloader"},
         {"name": "--len_sample", "type":int, "default": 10000, "help": "length of a sample"},

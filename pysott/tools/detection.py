@@ -24,7 +24,7 @@ class Detnet():
     """
     def __init__(self, init_pic, init_bbox):
         # load config
-        cfg.merge_from_file('/home/zim/Documents/python/VTT/pysott/experiments/siamrpn_r50_l234_dwxcorr/config.yaml')
+        cfg.merge_from_file('/home/wangzimo/VTT/VTT/pysott/experiments/siamrpn_r50_l234_dwxcorr/config.yaml')
         cfg.CUDA = torch.cuda.is_available() and cfg.CUDA
         device = torch.device('cuda' if cfg.CUDA else 'cpu')
 
@@ -32,7 +32,7 @@ class Detnet():
         model = ModelBuilder()
 
         # load model
-        model.load_state_dict(torch.load('/home/zim/Documents/python/VTT/pysott/experiments/siamrpn_r50_l234_dwxcorr/model.pth',
+        model.load_state_dict(torch.load('/home/wangzimo/VTT/VTT/pysott/experiments/siamrpn_r50_l234_dwxcorr/model.pth',
             map_location=lambda storage, loc: storage.cpu()))
         model.eval().to(device)
 

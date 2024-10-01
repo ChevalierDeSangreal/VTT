@@ -15,23 +15,11 @@ import torch.optim as optim
 from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
 
-import random
-import time
-
-import isaacgym  # noqa
-from isaacgym import gymutil
-from isaacgym.torch_utils import *
-import numpy as np
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.distributions.normal import Normal
-from torch.utils.tensorboard import SummaryWriter
 
 import pytz
 from datetime import datetime
 import sys
-sys.path.append('/home/zim/Documents/python/VTT')
+sys.path.append('/home/wangzimo/VTT/VTT')
 # print(sys.path)
 from aerial_gym.envs import *
 from aerial_gym.utils import task_registry, velh_lossVer5
@@ -73,9 +61,9 @@ def get_args():
             "help": "learning rate will decrease every step_size steps"},
 
         # model setting
-        {"name": "--param_save_path", "type":str, "default": '/home/zim/Documents/python/VTT/aerial_gym/param_saved/track_spaceVer0.pth',
+        {"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_spaceVer0.pth',
             "help": "The path to model parameters"},
-        {"name": "--param_load_path", "type":str, "default": '/home/zim/Documents/python/VTT/aerial_gym/param_saved/track_spaceVer0_120epoch.pth',
+        {"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_spaceVer0_120epoch.pth',
             "help": "The path to model parameters"},
         
         ]
@@ -117,7 +105,7 @@ if __name__ == "__main__":
     
     if args.tmp:
         run_name = 'tmp_' + run_name
-    writer = SummaryWriter(f"/home/zim/Documents/python/VTT/aerial_gym/runs/{run_name}")
+    writer = SummaryWriter(f"/home/wangzimo/VTT/VTT/aerial_gym/runs/{run_name}")
     writer.add_text(
         "hyperparameters",
         "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),

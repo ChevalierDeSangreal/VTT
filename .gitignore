@@ -6,5 +6,6 @@ runs/
 *.egg-info/
 past_param_saved/
 scripts_saved/
+test_runs/
 
 */__pycache__/

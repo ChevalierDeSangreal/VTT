@@ -15,6 +15,13 @@ class Loss:
         self.jerk = torch.zeros(batch_size, device=device)
         self.ori = torch.zeros(batch_size, device=device)
 
+    def reset(self, reset_idx):
+        self.direction[reset_idx] = 0
+        self.speed[reset_idx] = 0
+        self.h[reset_idx] = 0
+        self.acc[reset_idx] = 0
+        self.jerk[reset_idx] = 0
+        self.ori[reset_idx] = 0
     
 
 def space_lossVer5(loss:Loss, quad_state, acceleration, last_acceleration, tar_state, tar_h, tar_ori, step, dt):
@@ -50,10 +57,10 @@ def space_lossVer5(loss:Loss, quad_state, acceleration, last_acceleration, tar_s
     loss_ori = torch.norm(tar_ori - ori, dim=1, p=2)
     new_loss.ori = (loss.ori * step + loss_ori) / (step + 1)
 
-    loss_acc = torch.norm(acceleration, dim=1, p=2)
+    loss_acc = torch.norm(acceleration.clone(), dim=1, p=2)
     new_loss.acc = (loss.acc * step + loss_acc) / (step + 1)
 
-    loss_jerk = torch.norm((acceleration - last_acceleration) / dt, dim=1, p=2)
+    loss_jerk = torch.norm((acceleration.clone() - last_acceleration.clone()) / dt, dim=1, p=2)
     new_loss.jerk = (loss.jerk * step + loss_jerk) / (step + 1)
 
     # print(f"loss.direction[-1]:", loss.direction[-1])
@@ -344,4 +351,38 @@ def velh_lossVer5(quad_state, tar_pos, tar_h, tar_ori):
     
     loss_ori = torch.norm(tar_ori - ori, dim=1, p=2)
     
-    return 0.5 * loss_direction + 0.3 * loss_h + 0.1 * loss_speed + 0.1 * loss_ori, loss_direction, loss_speed, loss_ori, loss_h
+    return 0.5 * loss_direction + 1000.3 * loss_h + 0.1 * loss_speed + 0.1 * loss_ori, loss_direction, loss_speed, loss_ori, loss_h
+
+
+def velh_lossVer6(quad_state, tar_pos, tar_h, tar_ori, action):
+    """
+    Change height loss from distance to velocity direction
+    """
+    vel = quad_state[:, 6:9]
+    ori = quad_state[:, 3:6]
+    
+    z_coords = torch.full((quad_state.size(0), 1), tar_h, dtype=quad_state.dtype, device=quad_state.device)
+    tar_pos = torch.cat((tar_pos[:, :2], z_coords), dim=1)
+    
+    dis = (tar_pos - quad_state[:, :3])
+    
+    norm_dis = torch.norm(dis, dim=1, p=2)
+    norm_hor_dis = torch.norm(dis[:, :2], dim=1, p=2)
+    norm_hor_vel = torch.norm(vel[:, :2], dim=1, p=2)
+    norm_action = torch.norm(action, dim=1, p=2)
+    
+    tmp_norm_dis = torch.clamp(norm_dis, max=5)
+    tmp_norm_hor_dis = torch.clamp(norm_hor_dis, max=5)
+    
+    loss_direction = (1 - F.cosine_similarity(dis, vel[:, :3])) * tmp_norm_dis
+    
+    loss_speed = torch.abs(tmp_norm_hor_dis - norm_hor_vel)
+    
+    loss_h = torch.abs(quad_state[:, 2] - tar_h)
+    
+    loss_ori = torch.norm(tar_ori - ori, dim=1, p=2) * norm_action
+    # if torch.isnan(loss_ori).any():
+    #     print("????????????", loss_ori, ori, tar_ori)
+
+
+    return 0.97 * loss_direction + 0.02 * loss_speed + 0.01 * loss_ori, loss_direction, loss_speed, loss_ori, loss_h

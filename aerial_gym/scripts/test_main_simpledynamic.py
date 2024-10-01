@@ -19,11 +19,11 @@ import sys
 from datetime import datetime
 import pytz
 
-sys.path.append('/home/zim/Documents/python/VTT')
+sys.path.append('/home/wangzimo/VTT/VTT')
 # print(sys.path)
 from aerial_gym.envs import *
 from aerial_gym.utils import task_registry, space_lossVer5, Loss, velh_lossVer5
-from aerial_gym.models import TrackSpaceModuleVer3
+from aerial_gym.models import TrackSpaceModuleVer4
 from aerial_gym.envs import SimpleDynamics
 # os.path.basename(__file__).rstrip(".py")
 def get_args():
@@ -32,8 +32,8 @@ def get_args():
         {"name": "--experiment_name", "type": str, "default": "test_height__noreduction", "help": "Name of the experiment to run or load."},
         {"name": "--headless", "action": "store_true", "default": True, "help": "Force display off at all times"},
         {"name": "--horovod", "action": "store_true", "default": False, "help": "Use horovod for multi-gpu training"},
-        {"name": "--num_envs", "type": int, "default": 64, "help": "Number of environments to create. Batch size will be equal to this"},
-        {"name": "--seed", "type": int, "default": 75831, "help": "Random seed. Overrides config file if provided."},
+        {"name": "--num_envs", "type": int, "default": 1024, "help": "Number of environments to create. Batch size will be equal to this"},
+        {"name": "--seed", "type": int, "default": 751, "help": "Random seed. Overrides config file if provided."},
 
         # train setting
         # {"name": "--learning_rate", "type":float, "default": 0.0026,
@@ -48,15 +48,15 @@ def get_args():
         #     "help": "length of a sample"},
         {"name": "--tmp", "type": bool, "default": True, "help": "Set false to officially save the trainning log"},
         # model setting
-        {"name": "--param_load_path", "type":str, "default": '/home/zim/Documents/python/VTT/aerial_gym/param_saved/track_spaceVer0.pth',
+        {"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_spaceVer0_simple_3000epoch_1024b_reduce.pth',
             "help": "The path to model parameters"},
 
         # test setting
         {"name": "--visual", "action": "store_true", "default": False, "help": "Whether use isaac gym to visual movement"},
-        {"name": "--batch_size", "type":int, "default": 64,  "help": "batch size of training. Notice that batch_size should be equal to num_envs"},
+        {"name": "--batch_size", "type":int, "default": 1024,  "help": "batch size of training. Notice that batch_size should be equal to num_envs"},
         {"name": "--num_epoch", "type":int, "default": 8, "help": "num of epoch"},
-        {"name": "--num_worker", "type":int, "default": 4, "help": "num worker of dataloader"},
-        {"name": "--len_sample", "type":int, "default": 10000, "help": "length of a sample"},
+        {"name": "--num_worker", "type":int, "default": 16, "help": "num worker of dataloader"},
+        {"name": "--len_sample", "type":int, "default": 150, "help": "length of a sample"},
         
         ]
 
@@ -98,7 +98,7 @@ if __name__ == "__main__":
     run_name = f"Test__{args.experiment_name}__{args.seed}__{get_time()}"
     if args.tmp:
         run_name = 'tmp_' + run_name
-    writer = SummaryWriter(f"/home/zim/Documents/python/AGAPG-main/aerial_gym/runs/{run_name}")
+    writer = SummaryWriter(f"/home/wangzimo/VTT/VTT/aerial_gym/test_runs/{run_name}")
     writer.add_text(
         "hyperparameters",
         "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
@@ -113,9 +113,9 @@ if __name__ == "__main__":
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     
-    dynamic = NRSimpleDynamics()
+    dynamic = SimpleDynamics()
     
-    model = TrackSpaceModuleVer3(device=device).to(device)
+    model = TrackSpaceModuleVer4(device=device).to(device)
     checkpoint = torch.load(args.param_load_path, map_location=device)
     model.load_state_dict(checkpoint)
 
@@ -133,6 +133,8 @@ if __name__ == "__main__":
             now_quad_state = envs.reset(reset_buf=reset_buf).detach()
 
             reset_buf = torch.zeros((args.batch_size,))
+            reset_idx = []
+            timer = torch.zeros((args.batch_size,), device=device)
             
             num_reset = 0
             
@@ -152,16 +154,25 @@ if __name__ == "__main__":
 
                 # action = model(now_quad_state[:, 3:], rel_dis, real_rel_dis)
                 # print("##### 1")
-                action = model(now_quad_state[:, 3:], rel_dis)
+                action = model(now_quad_state[:, 6:9], rel_dis)
                 if torch.isnan(action).any():
                     print("Nan detected!!!")
                     exit(0)
                 
-                
+                # if step == 25 or step == 26 or step == 27:
+                #     print(action[0])
+                # if step == 53 or step == 54 or step == 55:
+                #     print(action[0])
                 new_state_dyn, acceleration = dynamic(now_quad_state, action, envs.cfg.sim.dt)
+                # if step == 25 or step == 26 or step == 27:
+                #     print(acceleration[0])
+                # if step == 53 or step == 54 or step == 55:
+                #     print(acceleration[0])
                 # print("##### 2")
                 if not step:
                     last_acceleration = acceleration
+                else:
+                    last_acceleration[reset_idx] = acceleration[reset_idx]
                 # new_state_dyn = torch.cat((action, action.clone().detach(), action.clone().detach()), dim=1)
 
                 new_state_sim, tar_state = envs.step(new_state_dyn.detach())
@@ -180,49 +191,59 @@ if __name__ == "__main__":
 
                 # if (step + 1) % 50 == 0:
                 reset_buf, reset_idx = envs.check_reset_out()
-                if len(reset_idx):
-                    print(f"On step {step}, reset {reset_idx}")
+                # if len(reset_idx):
+                #     print(f"On step {step}, reset {reset_idx}")
                 not_reset_buf = torch.logical_not(reset_buf)
                 num_reset += len(reset_idx)
 
                     
                 # print("##### 9")
-                loss_final, loss = space_lossVer5(loss, now_quad_state, acceleration, last_acceleration, tar_state, 7, tar_ori, step, envs.cfg.sim.dt)
+                loss_final, loss = space_lossVer5(loss, now_quad_state, acceleration, last_acceleration, tar_state, 7, tar_ori, timer, envs.cfg.sim.dt)
                 last_acceleration = acceleration
                 # print(f"loss_final shape:{loss_final.shape}")
                 # loss_final.backward(not_reset_buf, retain_graph=True)
                 # print("##### 10")
-                ave_loss = torch.sum(torch.mul(not_reset_buf, loss_final)) / (args.batch_size - len(reset_idx))
-                sum_loss += ave_loss
+                sum_loss += torch.sum(torch.mul(not_reset_buf, loss_final))
                 num_loss += args.batch_size - len(reset_idx)
 
                     
                 # print("##### 11")
                 now_quad_state[reset_idx] = envs.reset(reset_buf=reset_buf)[reset_idx].detach()
+                
+
+                horizon_dis = torch.norm(now_quad_state[0, :2] - tar_pos[0, :2], dim=0, p=2)
+                speed = torch.norm(now_quad_state[0, 6:9], dim=0, p=2)
+                
+                if reset_buf[0]:
+                    loss_final[0] = float('nan')
+                writer.add_scalar(f'Total Loss', loss_final[0], step)
+                writer.add_scalar(f'Direction Loss', loss.direction[0], step)
+                writer.add_scalar(f'Speed Loss', loss.speed[0], step)
+                writer.add_scalar(f'Orientation Loss', loss.ori[0], step)
+                writer.add_scalar('Acceleration Loss', loss.acc[0], step)
+                writer.add_scalar('Jerk Loss', loss.jerk[0], step)
+                
+                writer.add_scalar(f'Horizon Distance', horizon_dis, step)
+                writer.add_scalar(f'Distance X', tar_pos[0, 0] - now_quad_state[0, 0], step)
+                writer.add_scalar(f'Distance Y', tar_pos[0, 1] - now_quad_state[0, 1], step)
+                writer.add_scalar(f'Acceleration X', acceleration[0, 0], step)
+                writer.add_scalar(f'Acceleration Y', acceleration[0, 1], step)
+                writer.add_scalar(f'Acceleration Z', acceleration[0, 2], step)
+                writer.add_scalar(f'Speed', speed, step)
+                writer.add_scalar(f'Height', now_quad_state[0, 2], step)
+                loss.reset(reset_idx=reset_idx)
+                timer = timer + 1
+                timer[reset_idx] = 0
             # print("##### 15")
             # optimizer.step()
             # print("##### 16")
             # optimizer.zero_grad()
 
-            ave_loss_direciton = torch.sum(loss.direction.detach()) / args.batch_size
-            ave_loss_speed = torch.sum(loss.speed.detach()) / args.batch_size
-            ave_loss_ori = torch.sum(loss.ori.detach()) / args.batch_size
-            ave_loss_h = torch.sum(loss.h.detach()) / args.batch_size
-            # ave_loss_intent = torch.sum(loss_intent) / args.batch_size
-            ave_loss_final = torch.sum(loss_final.detach()) / args.batch_size
-            
-            
-            writer.add_scalar('Ave Loss', sum_loss / num_loss, epoch)
-            writer.add_scalar('Loss Final', ave_loss_final.item(), epoch)
-            writer.add_scalar('Loss Distance', ave_loss_direciton.item(), epoch)
-            writer.add_scalar('Loss Speed', ave_loss_speed.item(), epoch)
-            # writer.add_scalar('Loss Intent', ave_loss_intent.item(), epoch)
-            writer.add_scalar('Loss Orientation', ave_loss_ori.item(), epoch)
-            writer.add_scalar('Loss Height', ave_loss_h.item(), epoch)
-            writer.add_scalar('Number Reset', num_reset, epoch)
-            # print("##### 17")
 
-            print(f"Epoch {epoch}, Ave loss = {sum_loss / num_loss}, num reset = {num_reset}")
+            
+            
+
+            # print("##### 17")
 
             
             # envs.update_target_traj()

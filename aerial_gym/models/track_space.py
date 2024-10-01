@@ -5,6 +5,38 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 from .resnet import Resnet
 
+class TrackSpaceModuleVer4(nn.Module):
+    """
+    On the base of Ver3
+    Reduced model size
+    Deleted useless input
+    """
+    def __init__(self, input_size=6, hidden_size1=32, hidden_size2=32, output_size=3, device='cpu'):
+        print("TrackSpaceModel Initializing...")
+
+        super(TrackSpaceModuleVer4, self).__init__()
+        self.hidden_layer1 = nn.Linear(input_size, hidden_size1).to(device)
+        self.activation1 = nn.ELU().to(device)
+        self.hidden_layer2 = nn.Linear(hidden_size1, hidden_size2).to(device)
+        self.activation2 = nn.ELU().to(device)
+        self.output_layer = nn.Linear(hidden_size2, output_size).to(device)
+
+        torch.nn.init.kaiming_normal_(self.hidden_layer1.weight)
+        torch.nn.init.kaiming_normal_(self.hidden_layer2.weight)
+        torch.nn.init.kaiming_normal_(self.output_layer.weight)
+
+
+    def forward(self, now_state, rel_dis):
+        
+        x = torch.cat((now_state, rel_dis), dim=1)
+        x = self.hidden_layer1(x)
+        x = self.activation1(x)
+        x = self.hidden_layer2(x)
+        x = self.activation2(x)
+        x = self.output_layer(x)
+        x = torch.sigmoid(x) * 2 - 1
+        return x
+    
 class TrackSpaceModuleVer3(nn.Module):
     """
     Change the output of model from attitude level control to desired acceleration.

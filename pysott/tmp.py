@@ -1,5 +1,5 @@
 import sys
 
-sys.path.append('/home/zim/Documents/python/VTT')
+sys.path.append('/home/wangzimo/VTT/VTT')
 from pysott.tools import *
 tmp()

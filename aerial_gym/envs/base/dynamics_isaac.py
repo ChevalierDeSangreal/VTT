@@ -32,6 +32,7 @@ class MyDynamics:
         # NUMPY PARAMETERS
         self.mass = self.cfg["mass"]
         self.kinv_ang_vel_tau = np.array(self.cfg["kinv_ang_vel_tau"])
+        self.arm_length = 0.2
 
         # self.inertia_vector = (
         #     self.mass / 12.0 * self.arm_length**2 *

@@ -108,7 +108,7 @@ class TrackSpaceVer2(BaseTask):
             self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
 
         # init dataset
-        self.tar_traj_dataset = TargetDataset('/home/zim/Documents/python/VTT/aerial_gym/data', self.device)
+        self.tar_traj_dataset = TargetDataset('/home/wangzimo/VTT/VTT/aerial_gym/data', self.device)
         self.tar_traj_dataloader = DataLoader(self.tar_traj_dataset, batch_size=self.num_envs, shuffle=True)
         self.tar_traj_iter = itertools.cycle(self.tar_traj_dataloader)
         self.tar_traj = next(self.tar_traj_iter)
@@ -116,37 +116,37 @@ class TrackSpaceVer2(BaseTask):
         self.count_step = torch.zeros((self.num_envs, ), dtype=torch.long, device=self.device)
         
         
-    # def render(self, sync_frame_time=True):
-    #     # print("##### 5.1")
-    #     # Fetch results
-    #     self.gym.fetch_results(self.sim, True) # use only when device is not "cpu"
-    #     # Step graphics. Skipping this causes the onboard robot camera tensors to not be updated
-    #     # print("##### 5.2")
-    #     # self.gym.step_graphics(self.sim)
-    #     # # print("##### 5.3")
-    #     # self.gym.render_all_camera_sensors(self.sim)
-    #     # print("##### 5.4")
-    #     # if viewer exists update it based on requirement
-    #     if self.viewer:
-    #         # print("##### 5.5")
-    #         # check for window closed
-    #         if self.gym.query_viewer_has_closed(self.viewer):
-    #             sys.exit()
+    def render(self, sync_frame_time=True):
+        # print("##### 5.1")
+        # Fetch results
+        self.gym.fetch_results(self.sim, True) # use only when device is not "cpu"
+        # Step graphics. Skipping this causes the onboard robot camera tensors to not be updated
+        # print("##### 5.2")
+        # self.gym.step_graphics(self.sim)
+        # # print("##### 5.3")
+        # self.gym.render_all_camera_sensors(self.sim)
+        # print("##### 5.4")
+        # if viewer exists update it based on requirement
+        if self.viewer:
+            # print("##### 5.5")
+            # check for window closed
+            if self.gym.query_viewer_has_closed(self.viewer):
+                sys.exit()
 
-    #         # check for keyboard events
-    #         for evt in self.gym.query_viewer_action_events(self.viewer):
-    #             if evt.action == "QUIT" and evt.value > 0:
-    #                 sys.exit()
-    #             elif evt.action == "toggle_viewer_sync" and evt.value > 0:
-    #                 self.enable_viewer_sync = not self.enable_viewer_sync
+            # check for keyboard events
+            for evt in self.gym.query_viewer_action_events(self.viewer):
+                if evt.action == "QUIT" and evt.value > 0:
+                    sys.exit()
+                elif evt.action == "toggle_viewer_sync" and evt.value > 0:
+                    self.enable_viewer_sync = not self.enable_viewer_sync
 
-    #         # update viewer based on requirement
-    #         if self.enable_viewer_sync:
-    #             self.gym.draw_viewer(self.viewer, self.sim, True)
-    #             if sync_frame_time:
-    #                 self.gym.sync_frame_time(self.sim)
-    #         else:
-    #             self.gym.poll_viewer_events(self.viewer)
+            # update viewer based on requirement
+            if self.enable_viewer_sync:
+                self.gym.draw_viewer(self.viewer, self.sim, True)
+                if sync_frame_time:
+                    self.gym.sync_frame_time(self.sim)
+            else:
+                self.gym.poll_viewer_events(self.viewer)
 
     def create_sim(self):
         self.sim = self.gym.create_sim(
@@ -314,6 +314,8 @@ class TrackSpaceVer2(BaseTask):
             reset_idx = torch.arange(self.num_envs, device=self.device)
         else:
             reset_idx = torch.nonzero(reset_buf).squeeze(-1)
+            # if not len(reset_idx):
+            #     print("################", reset_idx)
         # print("##### 12")
         if len(reset_idx):
             self.set_reset_idx(reset_idx)
@@ -489,8 +491,9 @@ class TrackSpaceVer2(BaseTask):
         tmp_tar_state[reset_idx, 3:7] = self.euler2qua(tar_state[reset_idx, 3:6])
         tmp_tar_state[reset_idx, 7:10] = tar_state[reset_idx, 6:9]
         tmp_tar_state[reset_idx, 10:13] = tar_state[reset_idx, 9:12]
-
+        
         self.root_states.copy_(tmp_tar_state)
+        self.gym.set_actor_root_state_tensor(self.sim, self.root_tensor)
         
         
     def check_reset_out(self):
@@ -511,13 +514,13 @@ class TrackSpaceVer2(BaseTask):
         out_space = torch.where(torch.logical_or(obs[:, 2] > 15, obs[:, 2] < 0), ones, out_space)
         out_space = torch.where(torch.any(torch.isnan(obs[:, :3]), dim=1).bool(), ones, out_space)
         out_space_idx = torch.nonzero(out_space).squeeze(-1)
-        if len(out_space_idx):
-            print("out_space:", out_space_idx)
+        # if len(out_space_idx):
+        #     print("out_space:", out_space_idx)
         # print("##### 8")
         out_time = self.time_out_buf
         out_time_idx = torch.nonzero(out_time).squeeze(-1)
-        if len(out_time_idx):
-            print("out_time:", out_time_idx)
+        # if len(out_time_idx):
+        #     print("out_time:", out_time_idx)
         
         # reset_buf = torch.logical_or(out_space, torch.logical_or(out_sight, out_time))
         reset_buf = torch.logical_or(out_space, out_time)

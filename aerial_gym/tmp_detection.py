@@ -1,12 +1,12 @@
 import sys
 
-sys.path.append('/home/zim/Documents/python/VTT')
+sys.path.append('/home/wangzimo/VTT/VTT')
 # from aerial_gym.utils import *
 
 from utils.bbox import *
 from pysott.tools import *
 
-frame = cv2.imread('/home/zim/Documents/python/VTT/tmp.jpg')
+frame = cv2.imread('/home/wangzimo/VTT/VTT/tmp.jpg')
 bbox = hand_pic2bbox(frame)
 
 detnet = Detnet(frame, bbox)
