@@ -502,7 +502,7 @@ def load_prepare_trajectory(base_dir, dt, speed_factor, test=False):
 
 def make_dataset(num_traj):
     config = {
-        "duration": 10,
+        "duration": 1,
         "train_split": 0.9,
         "freq_x": 0.9,
         "freq_y": 0.7,

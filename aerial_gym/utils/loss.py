@@ -351,7 +351,7 @@ def velh_lossVer5(quad_state, tar_pos, tar_h, tar_ori):
     
     loss_ori = torch.norm(tar_ori - ori, dim=1, p=2)
     
-    return 0.5 * loss_direction + 1.3 * loss_h + 0.1 * loss_speed + 0.1 * loss_ori, loss_direction, loss_speed, loss_ori, loss_h
+    return 0.5 * loss_direction + 1000.3 * loss_h + 0.1 * loss_speed + 0.1 * loss_ori, loss_direction, loss_speed, loss_ori, loss_h
 
 
 def velh_lossVer6(quad_state, tar_pos, tar_h, tar_ori, action):

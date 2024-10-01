@@ -203,8 +203,8 @@ if __name__ == "__main__":
                 
             # print("##### 9")
             # loss_final, loss = space_lossVer5(loss, now_quad_state, acceleration, last_acceleration, tar_state, 7, tar_ori, timer, envs.cfg.sim.dt)
-            loss_final, loss_direction, loss_speed, loss_ori, loss_h = velh_lossVer6(now_quad_state, tar_state, 7, tar_ori, action)
-
+            # loss_final, loss_direction, loss_speed, loss_ori, loss_h = velh_lossVer6(now_quad_state, tar_state, 7, tar_ori, action)
+            loss_final, loss_direction, loss_speed, loss_ori, loss_h = velh_lossVer5(now_quad_state, tar_state, 7, tar_ori)
 
             # print(f"loss_final shape:{loss_final.shape}")
             loss_final.backward(not_reset_buf)
