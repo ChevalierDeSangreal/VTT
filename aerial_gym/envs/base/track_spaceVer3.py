@@ -24,7 +24,7 @@ from aerial_gym.envs.base.base_task import BaseTask
 from .track_space_config import TrackSpaceCfg
 
 from aerial_gym.utils.helpers import asset_class_to_AssetOptions
-from aerial_gym.utils.math import rand_circle_point
+from aerial_gym.utils.mymath import rand_circle_point
 
 from aerial_gym.data.dataset import TargetDataset
 
@@ -392,7 +392,7 @@ class TrackSpaceVer3(BaseTask):
         self.tar_root_states[:, 10:13] = 0
         # set quats
         self.tar_root_states[:, 3:7] = 0
-        self.tar_root_states[:, 6] = 2
+        self.tar_root_states[:, 6] = 1
 
         self.gym.set_actor_root_state_tensor(self.sim, self.root_tensor)
 

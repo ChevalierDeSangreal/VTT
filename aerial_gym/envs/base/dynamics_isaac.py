@@ -232,8 +232,9 @@ class IsaacGymDynamics(MyDynamics):
         angular_velocity = state[:, 9:]
 
         # action is normalized between -1 and 1 --> rescale
-        
+        # print(action.shape)
         total_thrust = action[:, 0] * (2 * self.mass * (-self.torch_gravity[2])) + self.mass * (-self.torch_gravity[2])
+        # print(total_thrust.shape)
         # total_thrust = action[:, 0] * 7.5 + self.mass * (-self.torch_gravity[2])
         body_rates = action[:, 1:] * .5
 
@@ -249,6 +250,17 @@ class IsaacGymDynamics(MyDynamics):
             total_thrust, angular_velocity, body_rates, cross_prod
         ).to(self.device)
 
+        # 2) angular acceleration
+        tau = force_torques[:, 1:]
+        torch_inertia_J_inv = torch.inverse(self.torch_inertia_J.to(self.device))
+        angular_acc = torch.matmul(
+            torch_inertia_J_inv.to(self.device), torch.unsqueeze((tau - cross_prod).to(self.device), 2)
+        )[:, :, 0]
+        new_angular_velocity = angular_velocity + dt * angular_acc
+
+
+        attitude = attitude + dt * self.euler_rate(attitude, new_angular_velocity)
+
         # 1) linear dynamics
         force_expanded = torch.unsqueeze(force_torques[:, 0], 1)
         f_s = force_expanded.size()
@@ -263,46 +275,14 @@ class IsaacGymDynamics(MyDynamics):
         )
         velocity = velocity + dt * acceleration
 
-        # 2) angular acceleration
-        tau = force_torques[:, 1:]
-        torch_inertia_J_inv = torch.inverse(self.torch_inertia_J.to(self.device))
-        angular_acc = torch.matmul(
-            torch_inertia_J_inv.to(self.device), torch.unsqueeze((tau - cross_prod).to(self.device), 2)
-        )[:, :, 0]
-        new_angular_velocity = angular_velocity + dt * angular_acc
 
-        # other option: use quaternion
-        # --> also slight error to flightmare, even when using euler, no idea why
-        # from neural_control.trajectory.q_funcs import (
-        #     q_dot_new, euler_to_quaternion, quaternion_to_euler
-        # )
-        # quaternion = euler_to_quaternion(
-        #     attitude[0, 0].item(), attitude[0, 1].item(), attitude[0, 2].item()
-        # )
-        # print("quaternion", quaternion)
-        # np.set_printoptions(suppress=1, precision=7)
-        # av_test = angular_velocity[0].numpy()
-        # quaternion_omega = np.array([av_test[0], av_test[1], av_test[2]])
-        # print("quaternion_omega", quaternion_omega)
-        # q_dot = q_dot_new(quaternion, quaternion_omega)
-        # print("q dot", q_dot)
-        # # integrate
-        # new_quaternion = quaternion + dt * q_dot
-        # print("new_quaternion", new_quaternion)
-        # new_quaternion = new_quaternion / np.linalg.norm(new_quaternion)
-        # print("new_quaternion", new_quaternion)
-        # new_euler = quaternion_to_euler(new_quaternion)
-        # print("new euler", new_euler)
-
-        # pretty_print("attitude before", attitude)
-
-        attitude = attitude + dt * self.euler_rate(attitude, angular_velocity)
 
         # set final state
         state = torch.hstack(
             (position, attitude, velocity, new_angular_velocity)
         )
-        return state.float()
+        return state.float(), acceleration
+        # return state.float()
 
 
 

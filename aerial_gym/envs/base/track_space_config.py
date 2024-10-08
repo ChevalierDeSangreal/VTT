@@ -107,3 +107,4 @@ class TrackSpaceCfg(BaseConfig):
 
     class other:
         param_file_path = '/home/zim/Documents/python/AGAPG-main/aerial_gym/envs/base/param_file.pth'
+        
