@@ -23,7 +23,7 @@ from aerial_gym.utils import task_registry, velh_lossVer5, agile_lossVer1, Agile
 from aerial_gym.models import TrackAgileModuleVer0
 from aerial_gym.envs import IsaacGymDynamics, NewtonDynamics
 # os.path.basename(__file__).rstrip(".py")
-
+from pytorch3d.transforms import euler_angles_to_matrix
 
 """
 New Beginning
@@ -54,7 +54,7 @@ def get_args():
         {"name": "--tmp", "type": bool, "default": False, "help": "Set false to officially save the trainning log"},
         {"name": "--gamma", "type":int, "default": 0.8,
             "help": "how much will learning rate decrease"},
-        {"name": "--slide_size", "type":int, "default": 30,
+        {"name": "--slide_size", "type":int, "default": 10,
             "help": "size of GRU input window"},
         {"name": "--step_size", "type":int, "default": 100,
             "help": "learning rate will decrease every step_size steps"},
@@ -215,6 +215,10 @@ if __name__ == "__main__":
                 # ave_loss_intent = torch.sum(loss_intent) / args.batch_size
                 ave_loss = torch.sum(loss) / args.batch_size
 
+                rotation_matrices = euler_angles_to_matrix(now_quad_state[:, 3:6], convention='XYZ')
+                direction_vector = rotation_matrices @ init_vec
+                direction_vector = direction_vector.squeeze()
+
                 horizon_dis = torch.norm(now_quad_state[0, :2] - tar_pos[0, :2], dim=0, p=2)
                 speed = torch.norm(now_quad_state[0, 6:9], dim=0, p=2)
                 if reset_buf[0]:
@@ -226,19 +230,22 @@ if __name__ == "__main__":
                 writer.add_scalar(f'Orientation Loss', old_loss.ori[0], step)
                 writer.add_scalar(f'Height Loss', old_loss.h[0], step)
 
-                writer.add_scalar(f'Acceleration X', acceleration[0, 0], step)
-                writer.add_scalar(f'Acceleration Y', acceleration[0, 1], step)
-                writer.add_scalar(f'Acceleration Z', acceleration[0, 2], step)
+                writer.add_scalar(f'Orientation/X', direction_vector[0, 0], step)
+                writer.add_scalar(f'Orientation/Y', direction_vector[0, 1], step)
+                writer.add_scalar(f'Orientation/Z', direction_vector[0, 2], step)
+                writer.add_scalar(f'Acceleration/X', acceleration[0, 0], step)
+                writer.add_scalar(f'Acceleration/Y', acceleration[0, 1], step)
+                writer.add_scalar(f'Acceleration/Z', acceleration[0, 2], step)
                 writer.add_scalar(f'Horizon Distance', horizon_dis, step)
-                writer.add_scalar(f'Position X', now_quad_state[0, 0], step)
-                writer.add_scalar(f'Position Y', now_quad_state[0, 1], step)
-                writer.add_scalar(f'Distance X', tar_pos[0, 0] - now_quad_state[0, 0], step)
-                writer.add_scalar(f'Distance Y', tar_pos[0, 1] - now_quad_state[0, 1], step)
-                writer.add_scalar(f'Action F', action[0, 0], step)
-                writer.add_scalar(f'Action X', action[0, 1], step)
-                writer.add_scalar(f'Action Y', action[0, 2], step)
-                writer.add_scalar(f'Action Z', action[0, 3], step)
-                writer.add_scalar(f'Speed Z', now_quad_state[0, 8], step)
+                writer.add_scalar(f'Position/X', now_quad_state[0, 0], step)
+                writer.add_scalar(f'Position/Y', now_quad_state[0, 1], step)
+                writer.add_scalar(f'Distance/X', tar_pos[0, 0] - now_quad_state[0, 0], step)
+                writer.add_scalar(f'Distance/Y', tar_pos[0, 1] - now_quad_state[0, 1], step)
+                writer.add_scalar(f'Action/F', action[0, 0], step)
+                writer.add_scalar(f'Action/X', action[0, 1], step)
+                writer.add_scalar(f'Action/Y', action[0, 2], step)
+                writer.add_scalar(f'Action/Z', action[0, 3], step)
+                writer.add_scalar(f'Speed/Z', now_quad_state[0, 8], step)
                 writer.add_scalar(f'Speed', speed, step)
                 writer.add_scalar(f'Height', now_quad_state[0, 2], step)
 

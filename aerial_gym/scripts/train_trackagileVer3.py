@@ -26,8 +26,9 @@ from aerial_gym.envs import IsaacGymDynamics, NewtonDynamics
 
 
 """
-Based on trackagileVer0.py
-Try  to backpropatate every 150 step
+Based on trackagileVer1.py
+Trying to stay at initial position
+Only rotate to desired direction
 """
 
 
@@ -49,12 +50,12 @@ def get_args():
             "help": "num worker of dataloader"},
         {"name": "--num_epoch", "type":int, "default": 1520,
             "help": "num of epoch"},
-        {"name": "--len_sample", "type":int, "default": 250,
+        {"name": "--len_sample", "type":int, "default": 300,
             "help": "length of a sample"},
         {"name": "--tmp", "type": bool, "default": False, "help": "Set false to officially save the trainning log"},
         {"name": "--gamma", "type":int, "default": 0.8,
             "help": "how much will learning rate decrease"},
-        {"name": "--slide_size", "type":int, "default": 30,
+        {"name": "--slide_size", "type":int, "default": 10,
             "help": "size of GRU input window"},
         {"name": "--step_size", "type":int, "default": 100,
             "help": "learning rate will decrease every step_size steps"},
@@ -144,9 +145,9 @@ if __name__ == "__main__":
         print(f"Epoch {epoch} begin...")
         old_loss = AgileLoss(args.batch_size, device=device)
         optimizer.zero_grad()
-
-        timer = torch.zeros((args.batch_size,), device=device)
         
+        timer = torch.zeros((args.batch_size,), device=device)
+
         reset_buf = None
         now_quad_state = envs.reset(reset_buf=reset_buf).detach()
         if torch.isnan(now_quad_state[:, 3:6]).any():
@@ -215,9 +216,12 @@ if __name__ == "__main__":
             timer = timer + 1
             timer[reset_idx] = 0
 
-        loss.backward(not_reset_buf)
-        optimizer.step()
-        optimizer.zero_grad()
+            if not (step + 1) % 15:
+                loss.backward(not_reset_buf)
+                optimizer.step()
+                optimizer.zero_grad()
+                now_quad_state = now_quad_state.detach()
+                old_loss = AgileLoss(args.batch_size, device=device)
 
         ave_loss_direciton = torch.sum(new_loss.direction) / args.batch_size
         ave_loss_distance = torch.sum(new_loss.distance) / args.batch_size
