@@ -8,7 +8,7 @@ from .helpers import class_to_dict, get_args
 from .task_registry import task_registry
 from .model_registry import model_registry
 from .logger import Logger
-from .math import *
+from .mymath import *
 
 from .asset_manager import AssetManager
 from .loss import *

@@ -25,7 +25,7 @@ from aerial_gym.envs.base.base_task import BaseTask
 from .track_space_config import TrackSpaceCfg
 
 from aerial_gym.utils.helpers import asset_class_to_AssetOptions
-from aerial_gym.utils.math import rand_circle_point
+from aerial_gym.utils.mymath import rand_circle_point
 
 from aerial_gym.data.dataset import TargetDataset
 

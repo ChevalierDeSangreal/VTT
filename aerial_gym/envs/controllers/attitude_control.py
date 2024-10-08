@@ -6,7 +6,7 @@
 
 import torch
 import pytorch3d.transforms as p3d_transforms
-from aerial_gym.utils.math import * 
+from aerial_gym.utils.mymath import * 
 
 class LeeAttitudeContoller:
     def __init__(self, K_rot_tensor, K_angvel_tensor):
