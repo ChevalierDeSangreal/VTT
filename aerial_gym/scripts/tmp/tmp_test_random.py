@@ -1,7 +1,7 @@
 
 import sys
 
-sys.path.append('/home/zim/Documents/python/AGAPG-main')
+sys.path.append('/home/wangzimo/VTT/VTT')
 from aerial_gym.utils import rand_circle_point
 
 import torch

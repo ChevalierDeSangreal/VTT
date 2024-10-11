@@ -52,7 +52,7 @@ def get_args():
             "help": "learning rate will decrease every step_size steps"},
 
         # model setting
-        {"name": "--param_path_dynamic", "type":str, "default": '/home/zim/Documents/python/AGAPG-main/aerial_gym/param_saved/dynamic_learntVer2.pth',
+        {"name": "--param_path_dynamic", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/dynamic_learntVer2.pth',
             "help": "The path to dynamic model parameters"},
         {"name": "--param_save_path_track_simple", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_spaceVer0.pth',
             "help": "The path to model parameters"},

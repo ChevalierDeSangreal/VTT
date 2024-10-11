@@ -11,7 +11,7 @@ import pytz
 from datetime import datetime
 
 import sys
-sys.path.append('/home/zim/Documents/python/AGAPG-main')
+sys.path.append('/home/wangzimo/VTT/VTT')
 # print(sys.path)
 from aerial_gym.envs import *
 from aerial_gym.utils import task_registry, velh_loss, velh_lossVer2

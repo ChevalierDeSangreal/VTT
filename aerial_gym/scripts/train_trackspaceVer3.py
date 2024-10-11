@@ -23,7 +23,7 @@ sys.path.append('/home/wangzimo/VTT/VTT')
 # print(sys.path)
 from aerial_gym.envs import *
 from aerial_gym.utils import task_registry, space_lossVer5, Loss, velh_lossVer5
-from aerial_gym.models import TrackSpaceModuleVer3
+from aerial_gym.models import TrackSpaceModuleVer3, TrackGroundModelVer6
 from aerial_gym.envs import SimpleDynamics, NRSimpleDynamics
 # os.path.basename(__file__).rstrip(".py")
 torch.autograd.set_detect_anomaly(True)

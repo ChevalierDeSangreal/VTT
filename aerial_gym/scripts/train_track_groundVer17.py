@@ -17,7 +17,7 @@ from datetime import datetime
 
 from torch.optim import lr_scheduler
 import sys
-sys.path.append('/home/zim/Documents/python/AGAPG-main')
+sys.path.append('/home/wangzimo/VTT/VTT')
 # print(sys.path)
 from aerial_gym.envs import *
 from aerial_gym.utils import task_registry, velh_loss, velh_lossVer2, velh_lossVer3, velh_lossVer4, velh_lossVer5
@@ -30,19 +30,19 @@ def get_args():
         {"name": "--experiment_name", "type": str, "default": "exp7__chart__pretrain", "help": "Name of the experiment to run or load."},
         {"name": "--headless", "action": "store_true", "default": True, "help": "Force display off at all times"},
         {"name": "--horovod", "action": "store_true", "default": False, "help": "Use horovod for multi-gpu training"},
-        {"name": "--num_envs", "type": int, "default": 8, "help": "Number of environments to create. Batch size will be equal to this"},
+        {"name": "--num_envs", "type": int, "default": 16, "help": "Number of environments to create. Batch size will be equal to this"},
         {"name": "--seed", "type": int, "default": 42, "help": "Random seed. Overrides config file if provided."},
 
         # train setting
         {"name": "--learning_rate", "type":float, "default": 5.6e-5,
             "help": "the learning rate of the optimizer"},
-        {"name": "--batch_size", "type":int, "default": 8,
+        {"name": "--batch_size", "type":int, "default": 16,
             "help": "batch size of training. Notice that batch_size should be equal to num_envs"},
         {"name": "--num_worker", "type":int, "default": 4,
             "help": "num worker of dataloader"},
         {"name": "--num_epoch", "type":int, "default": 1000,
             "help": "num of epoch"},
-        {"name": "--len_sample", "type":int, "default": 500,
+        {"name": "--len_sample", "type":int, "default": 1000,
             "help": "length of a sample"},
         {"name": "--tmp", "type": bool, "default": True, "help": "Set false to officially save the trainning log"},
         {"name": "--gamma", "type":int, "default": 0.8,
@@ -51,11 +51,11 @@ def get_args():
             "help": "learning rate will decrease every step_size steps"},
 
         # model setting
-        {"name": "--param_path_dynamic", "type":str, "default": '/home/zim/Documents/python/AGAPG-main/aerial_gym/param_saved/dynamic_learntVer2.pth',
+        {"name": "--param_path_dynamic", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/dynamic_learntVer2.pth',
             "help": "The path to dynamic model parameters"},
-        {"name": "--param_save_path_track_simple", "type":str, "default": '/home/zim/Documents/python/AGAPG-main/aerial_gym/param_saved/track_groundVer17.pth',
+        {"name": "--param_save_path_track_simple", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_groundVer17.pth',
             "help": "The path to model parameters"},
-        {"name": "--param_load_path_track_simple", "type":str, "default": '/home/zim/Documents/python/AGAPG-main/aerial_gym/param_saved/track_groundVer17.pth',
+        {"name": "--param_load_path_track_simple", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_groundVer17.pth',
             "help": "The path to model parameters"},
         
         ]
@@ -99,7 +99,7 @@ if __name__ == "__main__":
     
     if args.tmp:
         run_name = 'tmp_' + run_name
-    writer = SummaryWriter(f"/home/zim/Documents/python/AGAPG-main/runs/{run_name}")
+    writer = SummaryWriter(f"/home/wangzimo/VTT/VTT/runs/{run_name}")
     writer.add_text(
         "hyperparameters",
         "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
@@ -146,13 +146,13 @@ if __name__ == "__main__":
         for step in range(args.len_sample):
             
             image = envs.get_camera_output()
-            
+            # print(type(now_quad_state))
             action = model(now_quad_state[:, 3:], image)
             if torch.isnan(action).any():
                 print("Nan detected!!!")
                 exit(0)
             
-            new_state_dyn = dynamic(now_quad_state, action, envs.cfg.sim.dt)
+            new_state_dyn, acceleration = dynamic(now_quad_state, action, envs.cfg.sim.dt)
 
             new_state_sim, tar_state = envs.step(action)
             # print(f"In epoch {epoch}, step{step}---------------------------")
@@ -163,7 +163,7 @@ if __name__ == "__main__":
             
             
             now_quad_state = new_state_dyn
-            
+            # print(type(now_quad_state))
             if (epoch + 1) % 5 == 0:
                 tar_pos[:, 2] = 7
                 if step > args.len_sample - 100:

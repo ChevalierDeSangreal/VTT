@@ -9,7 +9,7 @@ def main_test_height():
     In order to compare changed test with original test.
     """
     # print("??????????")
-    ea = event_accumulator.EventAccumulator('/home/zim/Documents/python/AGAPG-main/paper_data/test_height__small_tar') 
+    ea = event_accumulator.EventAccumulator('/home/wangzimo/VTT/VTT/paper_data/test_height__small_tar') 
     ea.Reload()
     # print(ea.scalars.Keys())
     # print("??????????")
@@ -23,7 +23,7 @@ def main_test_height():
             data[data_name].append(data_values)
             
             
-    ea2 = event_accumulator.EventAccumulator('/home/zim/Documents/python/AGAPG-main/paper_data/test_main') 
+    ea2 = event_accumulator.EventAccumulator('/home/wangzimo/VTT/VTT/paper_data/test_main') 
     ea2.Reload()
     
     data2 = defaultdict(list)
@@ -60,7 +60,7 @@ def main_test_height():
         plt.xlabel('Step')
         plt.ylabel('Value')
         plt.title(f'{key} Data')
-        plt.savefig(f'/home/zim/Documents/python/AGAPG-main/aerial_gym/scripts/charts_output/test_height__small_tar/{key}_plot.png')  # Save the plot to a file with the key name
+        plt.savefig(f'/home/wangzimo/VTT/VTT/aerial_gym/scripts/charts_output/test_height__small_tar/{key}_plot.png')  # Save the plot to a file with the key name
         plt.close()
     print("Complete!")
 
@@ -70,7 +70,7 @@ def main_test_moving():
     In order to compare changed test with original test.
     """
     # print("??????????")
-    ea = event_accumulator.EventAccumulator('/home/zim/Documents/python/AGAPG-main/paper_data/test_moving__1.5__h') 
+    ea = event_accumulator.EventAccumulator('/home/wangzimo/VTT/VTT/paper_data/test_moving__1.5__h') 
     ea.Reload()
     # print(ea.scalars.Keys())
     # print("??????????")
@@ -84,7 +84,7 @@ def main_test_moving():
             data[data_name].append(data_values)
             
             
-    ea2 = event_accumulator.EventAccumulator('/home/zim/Documents/python/AGAPG-main/paper_data/test_main__h') 
+    ea2 = event_accumulator.EventAccumulator('/home/wangzimo/VTT/VTT/paper_data/test_main__h') 
     ea2.Reload()
     
     data2 = defaultdict(list)
@@ -121,13 +121,13 @@ def main_test_moving():
         plt.xlabel('Step')
         plt.ylabel('Value')
         plt.title(f'{key}')
-        plt.savefig(f'/home/zim/Documents/python/AGAPG-main/aerial_gym/scripts/charts_output/test_moving__1.5/{key}_plot.png')  # Save the plot to a file with the key name
+        plt.savefig(f'/home/wangzimo/VTT/VTT/aerial_gym/scripts/charts_output/test_moving__1.5/{key}_plot.png')  # Save the plot to a file with the key name
         plt.close()
     print("Complete!")
     
 def main_test_movingVer2():
     # print("??????????")
-    ea = event_accumulator.EventAccumulator('/home/zim/Documents/python/AGAPG-main/paper_data/test_moving__3__h') 
+    ea = event_accumulator.EventAccumulator('/home/wangzimo/VTT/VTT/paper_data/test_moving__3__h') 
     ea.Reload()
     # print(ea.scalars.Keys())
     # print("??????????")
@@ -141,7 +141,7 @@ def main_test_movingVer2():
             data_values = [j.value for j in ea.scalars.Items(f'{data_name}{i}')]
             data[data_name].append(data_values)
     
-    ea2 = event_accumulator.EventAccumulator('/home/zim/Documents/python/AGAPG-main/paper_data/test_main__h') 
+    ea2 = event_accumulator.EventAccumulator('/home/wangzimo/VTT/VTT/paper_data/test_main__h') 
     ea2.Reload()
     
     data2 = defaultdict(list)
@@ -183,7 +183,7 @@ def main_test_movingVer2():
         # plt.title(f'{key}')
 
     plt.tight_layout()  # Adjust layout to prevent overlapping
-    plt.savefig('/home/zim/Documents/python/AGAPG-main/aerial_gym/scripts/charts_output/test_moving__3.png')  # Save the combined plot to a single file
+    plt.savefig('/home/wangzimo/VTT/VTT/aerial_gym/scripts/charts_output/test_moving__3.png')  # Save the combined plot to a single file
     plt.close()
     print("Complete!")
 
@@ -192,7 +192,7 @@ def main_test_ground():
     In order to compare changed test with original test.
     """
     # print("??????????")
-    ea = event_accumulator.EventAccumulator('/home/zim/Documents/python/AGAPG-main/paper_data/test_ground') 
+    ea = event_accumulator.EventAccumulator('/home/wangzimo/VTT/VTT/paper_data/test_ground') 
     ea.Reload()
     # print(ea.scalars.Keys())
     # print("??????????")
@@ -206,7 +206,7 @@ def main_test_ground():
             data[data_name].append(data_values)
             
             
-    ea2 = event_accumulator.EventAccumulator('/home/zim/Documents/python/AGAPG-main/paper_data/test_main') 
+    ea2 = event_accumulator.EventAccumulator('/home/wangzimo/VTT/VTT/paper_data/test_main') 
     ea2.Reload()
     
     data2 = defaultdict(list)
@@ -243,13 +243,13 @@ def main_test_ground():
         plt.xlabel('Step')
         plt.ylabel('Value')
         plt.title(f'{key} Data')
-        plt.savefig(f'/home/zim/Documents/python/AGAPG-main/aerial_gym/scripts/charts_output/test_ground/{key}_plot.png')  # Save the plot to a file with the key name
+        plt.savefig(f'/home/wangzimo/VTT/VTT/aerial_gym/scripts/charts_output/test_ground/{key}_plot.png')  # Save the plot to a file with the key name
         plt.close()
     print("Complete!")
     
 def test_heightVer2():
     # print("??????????")
-    ea = event_accumulator.EventAccumulator('/home/zim/Documents/python/AGAPG-main/paper_data/test_height__h') 
+    ea = event_accumulator.EventAccumulator('/home/wangzimo/VTT/VTT/paper_data/test_height__h') 
     ea.Reload()
     # print(ea.scalars.Keys())
     # print("??????????")
@@ -263,7 +263,7 @@ def test_heightVer2():
             data_values = [j.value for j in ea.scalars.Items(f'{data_name}{i}')]
             data[data_name].append(data_values)
     
-    ea2 = event_accumulator.EventAccumulator('/home/zim/Documents/python/AGAPG-main/paper_data/test_main__h') 
+    ea2 = event_accumulator.EventAccumulator('/home/wangzimo/VTT/VTT/paper_data/test_main__h') 
     ea2.Reload()
     
     data2 = defaultdict(list)
@@ -305,14 +305,14 @@ def test_heightVer2():
         # plt.title(f'{key}')
 
     plt.tight_layout()  # Adjust layout to prevent overlapping
-    plt.savefig('/home/zim/Documents/python/AGAPG-main/aerial_gym/scripts/charts_output/test_height.png')  # Save the combined plot to a single file
+    plt.savefig('/home/wangzimo/VTT/VTT/aerial_gym/scripts/charts_output/test_height.png')  # Save the combined plot to a single file
     plt.close()
     print("Complete!")
     
     
 def test_groundVer2():
     # print("??????????")
-    ea = event_accumulator.EventAccumulator('/home/zim/Documents/python/AGAPG-main/paper_data/test_ground') 
+    ea = event_accumulator.EventAccumulator('/home/wangzimo/VTT/VTT/paper_data/test_ground') 
     ea.Reload()
     # print(ea.scalars.Keys())
     # print("??????????")
@@ -326,7 +326,7 @@ def test_groundVer2():
             data_values = [j.value for j in ea.scalars.Items(f'{data_name}{i}')]
             data[data_name].append(data_values)
     
-    ea2 = event_accumulator.EventAccumulator('/home/zim/Documents/python/AGAPG-main/paper_data/test_main') 
+    ea2 = event_accumulator.EventAccumulator('/home/wangzimo/VTT/VTT/paper_data/test_main') 
     ea2.Reload()
     
     data2 = defaultdict(list)
@@ -368,14 +368,14 @@ def test_groundVer2():
         # plt.title(f'{key}')
 
     plt.tight_layout()  # Adjust layout to prevent overlapping
-    plt.savefig('/home/zim/Documents/python/AGAPG-main/aerial_gym/scripts/charts_output/test_ground.png')  # Save the combined plot to a single file
+    plt.savefig('/home/wangzimo/VTT/VTT/aerial_gym/scripts/charts_output/test_ground.png')  # Save the combined plot to a single file
     plt.close()
     print("Complete!")
     
 
 def main_test():
     # print("??????????")
-    ea = event_accumulator.EventAccumulator('/home/zim/Documents/python/AGAPG-main/paper_data/test_main__h') 
+    ea = event_accumulator.EventAccumulator('/home/wangzimo/VTT/VTT/paper_data/test_main__h') 
     ea.Reload()
     # print(ea.scalars.Keys())
     # print("??????????")
@@ -412,7 +412,7 @@ def main_test():
         # plt.title(f'{key}')
 
     plt.tight_layout()  # Adjust layout to prevent overlapping
-    plt.savefig('/home/zim/Documents/python/AGAPG-main/aerial_gym/scripts/charts_output/test_main.png')  # Save the combined plot to a single file
+    plt.savefig('/home/wangzimo/VTT/VTT/aerial_gym/scripts/charts_output/test_main.png')  # Save the combined plot to a single file
     plt.close()
     print("Complete!")
     
@@ -420,7 +420,7 @@ def main_test():
         
 def main_trainVer2():
     #加载日志数据
-    ea = event_accumulator.EventAccumulator('/home/zim/Documents/python/AGAPG-main/paper_data/train_nopretrain') 
+    ea = event_accumulator.EventAccumulator('/home/wangzimo/VTT/VTT/paper_data/train_nopretrain') 
     ea.Reload()
     print(ea.scalars.Keys())
 
@@ -451,18 +451,18 @@ def main_trainVer2():
     plt.legend()
 
     plt.tight_layout()  # Adjust layout to prevent overlapping
-    plt.savefig('/home/zim/Documents/python/AGAPG-main/aerial_gym/scripts/charts_output/main_train.png')  # Save the plot
+    plt.savefig('/home/wangzimo/VTT/VTT/aerial_gym/scripts/charts_output/main_train.png')  # Save the plot
     plt.show()
     print("Complete!")
     
     
 def main_pretrain():
     #加载日志数据
-    ea = event_accumulator.EventAccumulator('/home/zim/Documents/python/AGAPG-main/paper_data/train_nopretrain') 
+    ea = event_accumulator.EventAccumulator('/home/wangzimo/VTT/VTT/paper_data/train_nopretrain') 
     ea.Reload()
     print(ea.scalars.Keys())
     
-    ea2 = event_accumulator.EventAccumulator('/home/zim/Documents/python/AGAPG-main/paper_data/train_pretrain') 
+    ea2 = event_accumulator.EventAccumulator('/home/wangzimo/VTT/VTT/paper_data/train_pretrain') 
     ea2.Reload()
 
     # Get scalar data
@@ -499,13 +499,13 @@ def main_pretrain():
     plt.legend()
 
     plt.tight_layout()  # Adjust layout to prevent overlapping
-    plt.savefig('/home/zim/Documents/python/AGAPG-main/aerial_gym/scripts/charts_output/main_pretrain.png')  # Save the plot
+    plt.savefig('/home/wangzimo/VTT/VTT/aerial_gym/scripts/charts_output/main_pretrain.png')  # Save the plot
     plt.show()
     print("Complete!")
 
 def main_train():
     #加载日志数据
-    ea = event_accumulator.EventAccumulator('/home/zim/Documents/python/AGAPG-main/saved_runs/tmp_track_groundVer7__exp7__chart__42__2024-04-09 20:51:11 CST') 
+    ea = event_accumulator.EventAccumulator('/home/wangzimo/VTT/VTT/saved_runs/tmp_track_groundVer7__exp7__chart__42__2024-04-09 20:51:11 CST') 
     ea.Reload()
     # print(ea.scalars.Keys())
 

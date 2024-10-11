@@ -431,7 +431,7 @@ class TrackGroundTest(BaseTask):
         return tmp_camera_dep_root_tensors
 
     def save_camera_output(self):
-        filepath = '/home/zim/Documents/python/AGAPG-main/aerial_gym/scripts/camera_output/tmp.png'
+        filepath = '/home/wangzimo/VTT/VTT/aerial_gym/scripts/camera_output/tmp.png'
         self.gym.write_camera_image_to_file(self.sim, self.envs[0], self.camera_handles[0], gymapi.IMAGE_COLOR, filepath)
         return self.gym.get_camera_image(self.sim, self.envs[0], self.camera_handles[0], gymapi.IMAGE_COLOR)
     

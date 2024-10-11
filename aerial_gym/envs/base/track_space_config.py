@@ -106,5 +106,5 @@ class TrackSpaceCfg(BaseConfig):
             contact_collection = 0 # 0: never, 1: last sub-step, 2: all sub-steps (default=2)
 
     class other:
-        param_file_path = '/home/zim/Documents/python/AGAPG-main/aerial_gym/envs/base/param_file.pth'
+        param_file_path = '/home/wangzimo/VTT/VTT/aerial_gym/envs/base/param_file.pth'
         

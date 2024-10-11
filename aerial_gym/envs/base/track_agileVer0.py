@@ -22,6 +22,7 @@ from isaacgym import gymtorch, gymapi
 from isaacgym.torch_utils import *
 from aerial_gym.envs.base.base_task import BaseTask
 from .track_space_config import TrackSpaceCfg
+from .track_agile_config import TrackAgileCfg
 
 from aerial_gym.utils.helpers import asset_class_to_AssetOptions
 from aerial_gym.utils.mymath import rand_circle_point
@@ -35,7 +36,7 @@ import itertools
 
 class TrackAgileVer0(BaseTask):
 
-    def __init__(self, cfg: TrackSpaceCfg, sim_params, physics_engine, sim_device, headless):
+    def __init__(self, cfg: TrackAgileCfg, sim_params, physics_engine, sim_device, headless):
         self.cfg = cfg
 
         self.max_episode_length = int(self.cfg.env.episode_length_s / self.cfg.sim.dt)

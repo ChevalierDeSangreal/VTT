@@ -19,9 +19,9 @@ import sys
 sys.path.append('/home/wangzimo/VTT/VTT')
 # print(sys.path)
 from aerial_gym.envs import *
-from aerial_gym.utils import task_registry, velh_lossVer5, agile_lossVer1, AgileLoss, agile_lossVer0
-from aerial_gym.models import TrackAgileModuleVer0
-from aerial_gym.envs import IsaacGymDynamics, NewtonDynamics
+from aerial_gym.utils import task_registry, velh_lossVer5, agile_lossVer1, AgileLoss, agile_lossVer2
+from aerial_gym.models import TrackAgileModuleVer0, TrackGroundModelVer6
+from aerial_gym.envs import IsaacGymDynamics, NewtonDynamics, IsaacGymOriDynamics
 # os.path.basename(__file__).rstrip(".py")
 
 
@@ -42,7 +42,7 @@ def get_args():
         {"name": "--seed", "type": int, "default": 42, "help": "Random seed. Overrides config file if provided."},
 
         # train setting
-        {"name": "--learning_rate", "type":float, "default": 1.6e-5,
+        {"name": "--learning_rate", "type":float, "default": 5.6e-5,
             "help": "the learning rate of the optimizer"},
         {"name": "--batch_size", "type":int, "default": 512,
             "help": "batch size of training. Notice that batch_size should be equal to num_envs"},
@@ -50,7 +50,7 @@ def get_args():
             "help": "num worker of dataloader"},
         {"name": "--num_epoch", "type":int, "default": 1520,
             "help": "num of epoch"},
-        {"name": "--len_sample", "type":int, "default": 300,
+        {"name": "--len_sample", "type":int, "default": 1600,
             "help": "length of a sample"},
         {"name": "--tmp", "type": bool, "default": False, "help": "Set false to officially save the trainning log"},
         {"name": "--gamma", "type":int, "default": 0.8,
@@ -122,9 +122,11 @@ if __name__ == "__main__":
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
-    dynamic = IsaacGymDynamics()
+    # dynamic = IsaacGymDynamics()
+    dynamic = IsaacGymOriDynamics()
     
-    model = TrackAgileModuleVer0(device=device).to(device)
+    # model = TrackAgileModuleVer0(device=device).to(device)
+    model = TrackGroundModelVer6(device=device).to(device)
     # checkpoint = torch.load(args.param_load_path, map_location=device)
     # model.load_state_dict(checkpoint)
 
@@ -136,7 +138,7 @@ if __name__ == "__main__":
 
     init_vec = torch.tensor([[1.0, 0.0, 0.0]] * args.batch_size, device=device).unsqueeze(-1)
 
-    input_buffer = torch.zeros(args.slide_size, args.batch_size, 9+3).to(device)
+    
 
     
 
@@ -148,6 +150,8 @@ if __name__ == "__main__":
         
         timer = torch.zeros((args.batch_size,), device=device)
 
+        input_buffer = torch.zeros(args.slide_size, args.batch_size, 9+3).to(device)
+
         reset_buf = None
         now_quad_state = envs.reset(reset_buf=reset_buf).detach()
         if torch.isnan(now_quad_state[:, 3:6]).any():
@@ -157,13 +161,11 @@ if __name__ == "__main__":
         reset_buf = torch.zeros((args.batch_size,))
         
         num_reset = 0
-        
-
+        tar_state = now_quad_state.clone().detach()
         # train
         for step in range(args.len_sample):
 
             # rel_dis = envs.get_relative_distance()
-            tar_state = envs.get_tar_state().detach()
             rel_dis = tar_state[:, :3] - now_quad_state[:, :3]
             
             # real_rel_dis = envs.get_future_relative_distance()
@@ -171,13 +173,14 @@ if __name__ == "__main__":
             # action = model(now_quad_state[:, 3:], rel_dis, real_rel_dis)
             tmp_input = torch.cat((now_quad_state[:, 3:], rel_dis), dim=1)
             tmp_input = tmp_input.unsqueeze(0)
-            input_buffer = input_buffer[1:].detach()
+            input_buffer = input_buffer[1:].clone()
             input_buffer = torch.cat((input_buffer, tmp_input), dim=0)
             if torch.isnan(now_quad_state[:, 3:]).any():
                 # print(input_buffer[max(step+1-args.slide_size, 0):step+1])
                 print("Nan detected in input!!!")
                 exit(0)
-            action = model(input_buffer.clone().detach())
+            # action = model(input_buffer.clone())
+            action = model(now_quad_state[:, 3:], rel_dis)
             # print(action.shape)
             if torch.isnan(action).any():
                 print("Nan detected in action!!!")
@@ -186,7 +189,7 @@ if __name__ == "__main__":
             # print("Label:0")
             new_state_dyn, acceleration = dynamic(now_quad_state, action, envs.cfg.sim.dt)
             # print("Label:0.25")
-            new_state_sim, tar_state = envs.step(new_state_dyn.detach())
+            new_state_sim, tmp_tar_state = envs.step(new_state_dyn.detach())
             # print("Label:0.5")
             tar_pos = tar_state[:, :3].detach()
             
@@ -206,7 +209,7 @@ if __name__ == "__main__":
             # loss, loss_direction, loss_speed, loss_h, loss_ori = space_lossVer4(now_quad_state, tar_state, tar_pos, 7, tar_ori)
             # loss, loss_direction, loss_speed, loss_ori, loss_h = velh_lossVer5(now_quad_state, tar_pos, 7, tar_ori)
             # loss, loss_direction, loss_distance, loss_velocity, loss_ori, loss_h = agile_lossVer1(now_quad_state, tar_state, 7, tar_ori, 1, step, envs.cfg.sim.dt, init_vec)
-            loss, new_loss = agile_lossVer0(old_loss, now_quad_state, tar_state, 7, tar_ori, 1, timer, envs.cfg.sim.dt, init_vec)
+            loss, new_loss = agile_lossVer2(old_loss, now_quad_state, tar_state, 7, tar_ori, 1, timer, envs.cfg.sim.dt, init_vec)
             old_loss = new_loss
             # print("Label:2")
             
@@ -216,12 +219,13 @@ if __name__ == "__main__":
             timer = timer + 1
             timer[reset_idx] = 0
 
-            if not (step + 1) % 15:
+            if not (step + 1) % 50:
                 loss.backward(not_reset_buf)
                 optimizer.step()
                 optimizer.zero_grad()
                 now_quad_state = now_quad_state.detach()
                 old_loss = AgileLoss(args.batch_size, device=device)
+                input_buffer = input_buffer.detach()
 
         ave_loss_direciton = torch.sum(new_loss.direction) / args.batch_size
         ave_loss_distance = torch.sum(new_loss.distance) / args.batch_size

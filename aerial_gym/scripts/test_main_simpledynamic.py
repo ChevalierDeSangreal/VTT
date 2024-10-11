@@ -33,7 +33,7 @@ def get_args():
         {"name": "--headless", "action": "store_true", "default": True, "help": "Force display off at all times"},
         {"name": "--horovod", "action": "store_true", "default": False, "help": "Use horovod for multi-gpu training"},
         {"name": "--num_envs", "type": int, "default": 1024, "help": "Number of environments to create. Batch size will be equal to this"},
-        {"name": "--seed", "type": int, "default": 751, "help": "Random seed. Overrides config file if provided."},
+        {"name": "--seed", "type": int, "default": 7251, "help": "Random seed. Overrides config file if provided."},
 
         # train setting
         # {"name": "--learning_rate", "type":float, "default": 0.0026,
@@ -48,7 +48,7 @@ def get_args():
         #     "help": "length of a sample"},
         {"name": "--tmp", "type": bool, "default": True, "help": "Set false to officially save the trainning log"},
         # model setting
-        {"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_spaceVer0_simple_3000epoch_1024b_reduce.pth',
+        {"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_spaceVer0_simple_reduction_100h.pth',
             "help": "The path to model parameters"},
 
         # test setting
@@ -223,12 +223,18 @@ if __name__ == "__main__":
                 writer.add_scalar('Acceleration Loss', loss.acc[0], step)
                 writer.add_scalar('Jerk Loss', loss.jerk[0], step)
                 
+                writer.add_scalar(f'Acceleration/X', acceleration[0, 0], step)
+                writer.add_scalar(f'Acceleration/Y', acceleration[0, 1], step)
+                writer.add_scalar(f'Acceleration/Z', acceleration[0, 2], step)
                 writer.add_scalar(f'Horizon Distance', horizon_dis, step)
-                writer.add_scalar(f'Distance X', tar_pos[0, 0] - now_quad_state[0, 0], step)
-                writer.add_scalar(f'Distance Y', tar_pos[0, 1] - now_quad_state[0, 1], step)
-                writer.add_scalar(f'Acceleration X', acceleration[0, 0], step)
-                writer.add_scalar(f'Acceleration Y', acceleration[0, 1], step)
-                writer.add_scalar(f'Acceleration Z', acceleration[0, 2], step)
+                writer.add_scalar(f'Position/X', now_quad_state[0, 0], step)
+                writer.add_scalar(f'Position/Y', now_quad_state[0, 1], step)
+                writer.add_scalar(f'Distance/X', tar_pos[0, 0] - now_quad_state[0, 0], step)
+                writer.add_scalar(f'Distance/Y', tar_pos[0, 1] - now_quad_state[0, 1], step)
+                writer.add_scalar(f'Action/X', action[0, 0], step)
+                writer.add_scalar(f'Action/Y', action[0, 1], step)
+                writer.add_scalar(f'Action/Z', action[0, 2], step)
+                writer.add_scalar(f'Speed/Z', now_quad_state[0, 8], step)
                 writer.add_scalar(f'Speed', speed, step)
                 writer.add_scalar(f'Height', now_quad_state[0, 2], step)
                 loss.reset(reset_idx=reset_idx)

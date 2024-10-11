@@ -159,7 +159,7 @@ if __name__ == "__main__":
                 
                 # if not step % 10:
                 #     file_name = f'tmp{step}.png'
-                #     envs.save_camera_output(file_name=file_name, file_path='/home/zim/Documents/python/AGAPG-main/aerial_gym/scripts/camera_output/frames/')
+                #     envs.save_camera_output(file_name=file_name, file_path='/home/wangzimo/VTT/VTT/aerial_gym/scripts/camera_output/frames/')
             break
     print("Testing Complete!")
             

@@ -188,7 +188,7 @@ class TrackGroundModelVer5(nn.Module):
     
     """
     def __init__(self, input_size=13, hidden_size1=128, hidden_size2=128, hidden_size3=128, 
-                 hidden_size4=128, output_size=4, device='cpu', resnet_load_path='/home/zim/Documents/python/AGAPG-main/aerial_gym/param_saved/resnet.pth'):
+                 hidden_size4=128, output_size=4, device='cpu', resnet_load_path='/home/wangzimo/VTT/VTT/aerial_gym/param_saved/resnet.pth'):
         print("TrackGroundModel Initializing...")
 
         super(TrackGroundModelVer5, self).__init__()

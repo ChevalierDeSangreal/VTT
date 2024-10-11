@@ -108,10 +108,10 @@ class TrackSpaceVer2(BaseTask):
             self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
 
         # init dataset
-        self.tar_traj_dataset = TargetDataset('/home/wangzimo/VTT/VTT/aerial_gym/data', self.device)
-        self.tar_traj_dataloader = DataLoader(self.tar_traj_dataset, batch_size=self.num_envs, shuffle=True)
-        self.tar_traj_iter = itertools.cycle(self.tar_traj_dataloader)
-        self.tar_traj = next(self.tar_traj_iter)
+        # self.tar_traj_dataset = TargetDataset('/home/wangzimo/VTT/VTT/aerial_gym/data', self.device)
+        # self.tar_traj_dataloader = DataLoader(self.tar_traj_dataset, batch_size=self.num_envs, shuffle=True)
+        # self.tar_traj_iter = itertools.cycle(self.tar_traj_dataloader)
+        # self.tar_traj = next(self.tar_traj_iter)
         # print("Shape of tar_traj:", self.tar_traj.shape)
         self.count_step = torch.zeros((self.num_envs, ), dtype=torch.long, device=self.device)
         

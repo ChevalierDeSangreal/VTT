@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/home/zim/Documents/python/AGAPG-main')
+sys.path.append('/home/wangzimo/VTT/VTT')
 import numpy as np
 import casadi as ca
 import torch
@@ -202,7 +202,7 @@ class IsaacGymDynamics(MyDynamics):
         angular_velocity = state[:, 9:]
         # print(self.mass.device, action.device, self.torch_gravity.device)
         # action is normalized between -1 and 1 --> rescale
-        total_thrust = action[:, 0] * (2 * self.mass * (-self.torch_gravity[2])) + self.mass * (-self.torch_gravity[2])
+        total_thrust = action[:, 0] * (2 * self.mass * (self.torch_gravity[2])) + self.mass * (-self.torch_gravity[2])
         # total_thrust = action[:, 0] * 7.5 + self.mass * (-self.torch_gravity[2])
         body_rates = action[:, 1:] * .5
 
@@ -233,7 +233,7 @@ class IsaacGymDynamics(MyDynamics):
 
         # action is normalized between -1 and 1 --> rescale
         # print(action.shape)
-        total_thrust = action[:, 0] * (2 * self.mass * (-self.torch_gravity[2])) + self.mass * (-self.torch_gravity[2])
+        total_thrust = action[:, 0] * (2 * self.mass * (self.torch_gravity[2])) + self.mass * (-self.torch_gravity[2])
         # print(total_thrust.shape)
         # total_thrust = action[:, 0] * 7.5 + self.mass * (-self.torch_gravity[2])
         body_rates = action[:, 1:] * .5

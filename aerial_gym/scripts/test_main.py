@@ -48,7 +48,7 @@ def get_args():
         #     "help": "length of a sample"},
         {"name": "--tmp", "type": bool, "default": True, "help": "Set false to officially save the trainning log"},
         # model setting
-        {"name": "--param_load_path_track_simple", "type":str, "default": '/home/zim/Documents/python/AGAPG-main/aerial_gym/param_saved/track_spaceVer0.pth',
+        {"name": "--param_load_path_track_simple", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_spaceVer0.pth',
             "help": "The path to model parameters"},
 
         # test setting
@@ -98,7 +98,7 @@ if __name__ == "__main__":
     run_name = f"Test__{args.experiment_name}__{args.seed}__{get_time()}"
     if args.tmp:
         run_name = 'tmp_' + run_name
-    writer = SummaryWriter(f"/home/zim/Documents/python/AGAPG-main/aerial_gym/runs/{run_name}")
+    writer = SummaryWriter(f"/home/wangzimo/VTT/VTT/aerial_gym/runs/{run_name}")
     writer.add_text(
         "hyperparameters",
         "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
@@ -174,7 +174,7 @@ if __name__ == "__main__":
                 
                 # if not step % 10:
                 #     file_name = f'tmp{step}.png'
-                #     envs.save_camera_output(file_name=file_name, file_path='/home/zim/Documents/python/AGAPG-main/aerial_gym/scripts/camera_output/frames/')
+                #     envs.save_camera_output(file_name=file_name, file_path='/home/wangzimo/VTT/VTT/aerial_gym/scripts/camera_output/frames/')
             break
     print("Testing Complete!")
             
