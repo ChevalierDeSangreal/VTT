@@ -20,7 +20,7 @@ import sys
 sys.path.append('/home/wangzimo/VTT/VTT')
 # print(sys.path)
 from aerial_gym.envs import *
-from aerial_gym.utils import task_registry, velh_lossVer5, agile_lossVer1, AgileLoss, agile_lossVer0
+from aerial_gym.utils import task_registry, velh_lossVer5, agile_lossVer1, AgileLoss, agile_lossVer3
 from aerial_gym.models import TrackAgileModuleVer0, TrackGroundModelVer6
 from aerial_gym.envs import IsaacGymDynamics, NewtonDynamics
 # os.path.basename(__file__).rstrip(".py")
@@ -41,7 +41,7 @@ def get_args():
         {"name": "--seed", "type": int, "default": 142, "help": "Random seed. Overrides config file if provided."},
 
         # train setting
-        {"name": "--learning_rate", "type":float, "default": 5.6e-6,
+        {"name": "--learning_rate", "type":float, "default": 1.6e-6,
             "help": "the learning rate of the optimizer"},
         {"name": "--batch_size", "type":int, "default": 1024,
             "help": "batch size of training. Notice that batch_size should be equal to num_envs"},
@@ -49,7 +49,7 @@ def get_args():
             "help": "num worker of dataloader"},
         {"name": "--num_epoch", "type":int, "default": 1520,
             "help": "num of epoch"},
-        {"name": "--len_sample", "type":int, "default": 130,
+        {"name": "--len_sample", "type":int, "default": 150,
             "help": "length of a sample"},
         {"name": "--tmp", "type": bool, "default": False, "help": "Set false to officially save the trainning log"},
         {"name": "--gamma", "type":int, "default": 0.8,
@@ -60,7 +60,7 @@ def get_args():
             "help": "learning rate will decrease every step_size steps"},
 
         # model setting
-        {"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer3_stay_rotate.pth',
+        {"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer0.pth',
             "help": "The path to model parameters"},
         {"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer0.pth',
             "help": "The path to model parameters"},
@@ -120,10 +120,10 @@ if __name__ == "__main__":
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
-    dynamic = IsaacGymOriDynamics()
+    dynamic = IsaacGymDynamics()
     
-    # model = TrackAgileModuleVer0(device=device).to(device)
-    model = TrackGroundModelVer6(device=device).to(device)
+    model = TrackAgileModuleVer0(device=device).to(device)
+    # model = TrackGroundModelVer6(device=device).to(device)
     checkpoint = torch.load(args.param_load_path, map_location=device)
     model.load_state_dict(checkpoint)
     model.eval()
@@ -135,7 +135,7 @@ if __name__ == "__main__":
 
     init_vec = torch.tensor([[1.0, 0.0, 0.0]] * args.batch_size, device=device).unsqueeze(-1)
 
-    input_buffer = torch.zeros(args.slide_size, args.batch_size, 9+3).to(device)
+    
 
     with torch.no_grad():
         for epoch in range(args.num_epoch):
@@ -143,6 +143,7 @@ if __name__ == "__main__":
             print(f"Epoch {epoch} begin...")
             old_loss = AgileLoss(args.batch_size, device=device)
             timer = torch.zeros((args.batch_size,), device=device)
+            input_buffer = torch.zeros(args.slide_size, args.batch_size, 9+3).to(device)
             reset_buf = None
             now_quad_state = envs.reset(reset_buf=reset_buf).detach()
             if torch.isnan(now_quad_state[:, 3:6]).any():
@@ -153,13 +154,13 @@ if __name__ == "__main__":
             
             num_reset = 0
             
-
+            tar_state = envs.get_tar_state().detach()
             # train
             for step in range(args.len_sample):
 
                 # rel_dis = envs.get_relative_distance()
                 # tar_state = envs.get_tar_state().detach()
-                tar_state = envs.get_tar_state().detach()
+                
                 rel_dis = tar_state[:, :3] - now_quad_state[:, :3]
                 
                 # real_rel_dis = envs.get_future_relative_distance()
@@ -173,8 +174,8 @@ if __name__ == "__main__":
                     # print(input_buffer[max(step+1-args.slide_size, 0):step+1])
                     print("Nan detected in input!!!")
                     exit(0)
-                # action = model(input_buffer.clone().detach())
-                action = model(now_quad_state[:, 3:], rel_dis)
+                action = model(input_buffer.clone().detach())
+                # action = model(now_quad_state[:, 3:], rel_dis)
                 # print(action.shape)
                 if torch.isnan(action).any():
                     print("Nan detected in action!!!")
@@ -183,7 +184,9 @@ if __name__ == "__main__":
                 # print("Label:0")
                 new_state_dyn, acceleration = dynamic(now_quad_state, action, envs.cfg.sim.dt)
                 # print("Label:0.25")
-                new_state_sim, tmp_tar_state = envs.step(new_state_dyn.detach())
+                new_state_sim, tar_state = envs.step(new_state_dyn.detach())
+                # tmp = envs.get_camera_output()
+                # x = envs.save_camera_output(file_name=f'{step}.png')
                 # print("Label:0.5")
                 tar_pos = tar_state[:, :3].detach()
                 
@@ -201,7 +204,7 @@ if __name__ == "__main__":
                 # loss, loss_direction, loss_speed, loss_h, loss_ori = space_lossVer4(now_quad_state, tar_state, tar_pos, 7, tar_ori)
                 # loss, loss_direction, loss_speed, loss_ori, loss_h = velh_lossVer5(now_quad_state, tar_pos, 7, tar_ori)
                 # loss, loss_direction, loss_distance, loss_velocity, loss_ori, loss_h = agile_lossVer1(now_quad_state, tar_state, 7, tar_ori, 1, step, envs.cfg.sim.dt, init_vec)
-                loss, new_loss = agile_lossVer0(old_loss, now_quad_state, tar_state, 7, tar_ori, 3, timer, envs.cfg.sim.dt, init_vec)
+                loss, new_loss = agile_lossVer3(old_loss, now_quad_state, tar_state, 7, tar_ori, 1, timer, envs.cfg.sim.dt, init_vec)
                 old_loss = new_loss
                 # print("Label:2")
                 
@@ -225,37 +228,43 @@ if __name__ == "__main__":
                 cos_sim = F.cosine_similarity(direction_vector, rel_dis, dim=1)
                 theta = torch.acos(cos_sim)
                 theta_degrees = theta * 180.0 / torch.pi
+                
+                item_tested = 3
+                horizon_dis = torch.norm(now_quad_state[item_tested, :2] - tar_pos[item_tested, :2], dim=0, p=2)
+                speed = torch.norm(now_quad_state[item_tested, 6:9], dim=0, p=2)
 
-                horizon_dis = torch.norm(now_quad_state[0, :2] - tar_pos[0, :2], dim=0, p=2)
-                speed = torch.norm(now_quad_state[0, 6:9], dim=0, p=2)
-                if reset_buf[0]:
-                    loss[0] = float('nan')
-                writer.add_scalar(f'Total Loss', loss[0], step)
-                writer.add_scalar(f'Direction Loss', old_loss.direction[0], step)
-                writer.add_scalar(f'Distance Loss', old_loss.distance[0], step)
-                writer.add_scalar(f'Velocity Loss', old_loss.vel[0], step)
-                writer.add_scalar(f'Orientation Loss', old_loss.ori[0], step)
-                writer.add_scalar(f'Height Loss', old_loss.h[0], step)
+                if reset_buf[item_tested]:
+                    loss[item_tested] = float('nan')
+                writer.add_scalar(f'Total Loss', loss[item_tested], step)
+                writer.add_scalar(f'Direction Loss', old_loss.direction[item_tested], step)
+                writer.add_scalar(f'Distance Loss', old_loss.distance[item_tested], step)
+                writer.add_scalar(f'Velocity Loss', old_loss.vel[item_tested], step)
+                writer.add_scalar(f'Orientation Loss', old_loss.ori[item_tested], step)
+                writer.add_scalar(f'Height Loss', old_loss.h[item_tested], step)
 
-                writer.add_scalar(f'Orientation/X', direction_vector[0, 0], step)
-                writer.add_scalar(f'Orientation/Y', direction_vector[0, 1], step)
-                writer.add_scalar(f'Orientation/Z', direction_vector[0, 2], step)
-                writer.add_scalar(f'Orientation/Theta', theta_degrees[0], step)
-                writer.add_scalar(f'Acceleration/X', acceleration[0, 0], step)
-                writer.add_scalar(f'Acceleration/Y', acceleration[0, 1], step)
-                writer.add_scalar(f'Acceleration/Z', acceleration[0, 2], step)
+                writer.add_scalar(f'Orientation/X', direction_vector[item_tested, 0], step)
+                writer.add_scalar(f'Orientation/Y', direction_vector[item_tested, 1], step)
+                writer.add_scalar(f'Orientation/Z', direction_vector[item_tested, 2], step)
+                writer.add_scalar(f'Orientation/Theta', theta_degrees[item_tested], step)
+                writer.add_scalar(f'Acceleration/X', acceleration[item_tested, 0], step)
+                writer.add_scalar(f'Acceleration/Y', acceleration[item_tested, 1], step)
+                writer.add_scalar(f'Acceleration/Z', acceleration[item_tested, 2], step)
                 writer.add_scalar(f'Horizon Distance', horizon_dis, step)
-                writer.add_scalar(f'Position/X', now_quad_state[0, 0], step)
-                writer.add_scalar(f'Position/Y', now_quad_state[0, 1], step)
-                writer.add_scalar(f'Distance/X', tar_pos[0, 0] - now_quad_state[0, 0], step)
-                writer.add_scalar(f'Distance/Y', tar_pos[0, 1] - now_quad_state[0, 1], step)
-                writer.add_scalar(f'Action/F', action[0, 0], step)
-                writer.add_scalar(f'Action/X', action[0, 1], step)
-                writer.add_scalar(f'Action/Y', action[0, 2], step)
-                writer.add_scalar(f'Action/Z', action[0, 3], step)
-                writer.add_scalar(f'Speed/Z', now_quad_state[0, 8], step)
+                writer.add_scalar(f'Position/X', now_quad_state[item_tested, 0], step)
+                writer.add_scalar(f'Position/Y', now_quad_state[item_tested, 1], step)
+                writer.add_scalar(f'Target Position/X', tar_pos[item_tested, 0], step)
+                writer.add_scalar(f'Target Position/Y', tar_pos[item_tested, 1], step)
+                writer.add_scalar(f'Velocity/X', now_quad_state[item_tested, 6], step)
+                writer.add_scalar(f'Velocity/Y', now_quad_state[item_tested, 7], step)
+                writer.add_scalar(f'Distance/X', tar_pos[item_tested, 0] - now_quad_state[item_tested, 0], step)
+                writer.add_scalar(f'Distance/Y', tar_pos[item_tested, 1] - now_quad_state[item_tested, 1], step)
+                writer.add_scalar(f'Action/F', action[item_tested, 0], step)
+                writer.add_scalar(f'Action/X', action[item_tested, 1], step)
+                writer.add_scalar(f'Action/Y', action[item_tested, 2], step)
+                writer.add_scalar(f'Action/Z', action[item_tested, 3], step)
+                writer.add_scalar(f'Speed/Z', now_quad_state[item_tested, 8], step)
                 writer.add_scalar(f'Speed', speed, step)
-                writer.add_scalar(f'Height', now_quad_state[0, 2], step)
+                writer.add_scalar(f'Height', now_quad_state[item_tested, 2], step)
 
                 old_loss.reset(reset_idx=reset_idx)
                 timer = timer + 1

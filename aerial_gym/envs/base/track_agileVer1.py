@@ -121,8 +121,8 @@ class TrackAgileVer1(BaseTask):
         # self.traj_generator = TrajectoryGenerator(tar_v, self.cfg.sim.dt, direction_change_interval, total_time=10, batch_size=self.num_envs, device=self.device)
         # self.traj = self.traj_generator.batch_generate_trajectories()
 
-        self.tar_acc_norm = 5
-        self.tar_acc_intervel = 120 # How many time steps will acceleration change once
+        self.tar_acc_norm = 2
+        self.tar_acc_intervel = 150 # How many time steps will acceleration change once
         self.tar_acc = torch.zeros((self.num_envs, 2), dtype=torch.float, device=self.device)
 
         self.count_step = torch.zeros((self.num_envs, ), dtype=torch.long, device=self.device)
@@ -206,10 +206,10 @@ class TrackAgileVer1(BaseTask):
             
             camera_handle = self.gym.create_camera_sensor(env_handle, camera_properties)
             
-            camera_offset = gymapi.Vec3(0, 0, -0.2)
-            camera_rotation = gymapi.Quat.from_axis_angle(gymapi.Vec3(0, 1, 0), np.deg2rad(90))
+            camera_offset = gymapi.Vec3(0.5, 0, 0.05)
+            camera_rotation = gymapi.Quat.from_axis_angle(gymapi.Vec3(0, 1, 0), np.deg2rad(0))
             
-            self.gym.attach_camera_to_body(camera_handle, env_handle, self.robot_body_handle, gymapi.Transform(camera_offset, camera_rotation), gymapi.FOLLOW_POSITION)
+            self.gym.attach_camera_to_body(camera_handle, env_handle, self.robot_body_handle, gymapi.Transform(camera_offset, camera_rotation), gymapi.FOLLOW_TRANSFORM)
             self.camera_handles.append(camera_handle)
             
             camera_tensor = self.gym.get_camera_image_gpu_tensor(self.sim, env_handle, camera_handle, gymapi.IMAGE_COLOR)
@@ -316,9 +316,9 @@ class TrackAgileVer1(BaseTask):
         # print(self.tar_traj.shape)
         # print(self.tar_traj.shape)
         self.tar_root_states[env_ids, 0] = 3
-        self.tar_root_states[env_ids, 2:3] = 0
+        self.tar_root_states[env_ids, 1] = 0
         # self.tar_root_states[env_ids, 0:3] = 0
-        self.tar_root_states[env_ids, 2] = 6
+        self.tar_root_states[env_ids, 2] = 7
 
         # reset linevels
         self.tar_root_states[env_ids, 7:10] = 0
@@ -329,7 +329,7 @@ class TrackAgileVer1(BaseTask):
         self.tar_root_states[env_ids, 3:7] = 0
         self.tar_root_states[env_ids, 6] = 1.0
 
-        self.tar_acc = rand_circle_point(num_resets, self.tar_acc_norm, self.device)
+        self.tar_acc[env_ids] = rand_circle_point(num_resets, self.tar_acc_norm, self.device)
         # reset position
         # print(self.count_step.size(), self.tar_traj.size(),env_ids)
         # self.root_states[env_ids, 0:3] = self.tar_traj[env_ids, self.count_step[env_ids], :3]
@@ -381,9 +381,10 @@ class TrackAgileVer1(BaseTask):
         self.tar_acc[inv_acc_idx] *= -1
         # set position
         # self.tar_root_states[range(self.num_envs), 0:3] = 0
-        self.tar_root_states[:, 2] = 6
+        self.tar_root_states[:, 2] = 7
         # set linearvels
         # print(f"Before Velocity in x: {self.tar_root_states[0, 7]}, Acceleration in x: {self.tar_acc[0, 0]}")
+        # print(self.tar_root_states.shape, self.tar_acc.shape)
         self.tar_root_states[:, 7:9] += self.tar_acc * self.cfg.sim.dt
         # print(f"After Velocity in x: {self.tar_root_states[0, 7]}, Acceleration in x: {self.tar_acc[0, 0]}")
         self.tar_root_states[:, 9] = 0
@@ -448,10 +449,10 @@ class TrackAgileVer1(BaseTask):
         # print(tmp_camera_dep_root_tensors.device)
         return tmp_camera_dep_root_tensors
 
-    def save_camera_output(self, file_name="tmp.png", file_path="/home/lab929/wzm/FYP/AGAPG/aerial_gym/scripts/camera_output/"):
+    def save_camera_output(self, file_name="tmp.png", file_path="/home/wangzimo/VTT/VTT/aerial_gym/scripts/camera_output/frames/", idx=0):
         filepath = file_path + file_name
-        self.gym.write_camera_image_to_file(self.sim, self.envs[1], self.camera_handles[1], gymapi.IMAGE_COLOR, filepath)
-        return self.gym.get_camera_image(self.sim, self.envs[1], self.camera_handles[1], gymapi.IMAGE_COLOR)
+        self.gym.write_camera_image_to_file(self.sim, self.envs[idx], self.camera_handles[idx], gymapi.IMAGE_COLOR, filepath)
+        return self.gym.get_camera_image(self.sim, self.envs[idx], self.camera_handles[idx], gymapi.IMAGE_COLOR)
     
     
     def get_quad_state(self):
@@ -608,3 +609,35 @@ class TrackAgileVer1(BaseTask):
             exit(0)
         # 返回四元数
         return quaternions
+    
+    def render(self, sync_frame_time=True):
+        # # print("##### 5.1")
+        # # Fetch results
+        # self.gym.fetch_results(self.sim, True) # use only when device is not "cpu"
+        # # Step graphics. Skipping this causes the onboard robot camera tensors to not be updated
+        # # print("##### 5.2")
+        # self.gym.step_graphics(self.sim)
+        # # print("##### 5.3")
+        # self.gym.render_all_camera_sensors(self.sim)
+        # # print("##### 5.4")
+        # # if viewer exists update it based on requirement
+        if self.viewer:
+            # print("##### 5.5")
+            # check for window closed
+            if self.gym.query_viewer_has_closed(self.viewer):
+                sys.exit()
+
+            # check for keyboard events
+            for evt in self.gym.query_viewer_action_events(self.viewer):
+                if evt.action == "QUIT" and evt.value > 0:
+                    sys.exit()
+                elif evt.action == "toggle_viewer_sync" and evt.value > 0:
+                    self.enable_viewer_sync = not self.enable_viewer_sync
+
+            # update viewer based on requirement
+            if self.enable_viewer_sync:
+                self.gym.draw_viewer(self.viewer, self.sim, True)
+                if sync_frame_time:
+                    self.gym.sync_frame_time(self.sim)
+            else:
+                self.gym.poll_viewer_events(self.viewer)

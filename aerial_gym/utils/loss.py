@@ -42,6 +42,67 @@ class Loss:
         self.jerk[reset_idx] = 0
         self.ori[reset_idx] = 0
 
+def agile_lossVer3(loss:AgileLoss, quad_state, tar_state, tar_h, tar_ori, tar_dis, step, dt, init_vec):
+    """
+    Based on agile_lossVer2
+    Learn to Back to newton's Law
+    Using the sum of all time step
+    """
+    ori = quad_state[:, 3:6].clone()
+    vel = quad_state[:, 6:9].clone()
+
+    
+    z_coords = torch.full((quad_state.size(0), 1), tar_h, dtype=quad_state.dtype, device=quad_state.device)
+    tar_pos = torch.cat((tar_state[:, :2].clone(), z_coords), dim=1)
+    tar_vel = tar_state[:, 6:9]
+    
+    dis = (tar_pos[:, :3].clone() - quad_state[:, :3].clone())
+    rel_vel = (tar_vel.clone() - vel.clone())
+    
+    norm_hor_dis = torch.norm(dis[:, :2], dim=1, p=2)
+
+    new_loss = AgileLoss(loss.batch_size, loss.device)
+
+    rotation_matrices = euler_angles_to_matrix(ori, convention='XYZ')
+    direction_vector = rotation_matrices @ init_vec
+    direction_vector = direction_vector.squeeze()
+    # print(direction_vector.shape)
+    loss_direction = (1 - F.cosine_similarity(dis, direction_vector))
+    new_loss.direction = (loss.direction * step + loss_direction) / (step + 1)
+    # new_loss.direction = loss_direction.clone()
+
+    # tmp_norm_hor_dis = torch.clamp(norm_hor_dis, max=5)
+    # norm_hor_vel = torch.norm(vel[:, :2], dim=1, p=2)
+    # loss_speed = torch.abs(tmp_norm_hor_dis - norm_hor_vel)
+    loss_velocity = torch.norm(rel_vel, dim=1, p=2)
+    new_loss.vel = (loss.vel * step + loss_velocity) / (step + 1)
+    # new_loss.vel = loss_velocity.clone()
+    # new_loss.vel = loss_speed.clone()
+
+    loss_distance = torch.abs(norm_hor_dis - tar_dis)
+    new_loss.distance = (loss.distance * step + loss_distance) / (step + 1)
+    # new_loss.distance = loss_distance.clone()
+    
+    loss_h = torch.abs(quad_state[:, 2] - tar_h)
+    new_loss.h = (loss.h * step + loss_h) / (step + 1)
+    # new_loss.h = loss_h.clone()
+    
+    # pitch and roll are expected to be zero
+    # loss_ori = torch.norm(tar_ori[:, :2] - ori[:, :2], dim=1, p=2)
+    loss_ori = torch.norm(tar_ori - ori, dim=1, p=2)
+    new_loss.ori = (loss.ori * step + loss_ori) / (step + 1)
+    # new_loss.ori = loss_ori.clone()
+
+
+    # action(body rate) ---> ori & acc ---> vel ---> pos
+    # loss_final = new_loss.direction + new_loss.h * 10 + new_loss.ori + new_loss.distance + new_loss.vel
+    # loss_final = new_loss.ori + new_loss.distance# + new_loss.direction
+
+    loss_final = 0.1 * new_loss.ori + 5 * new_loss.distance + 0.5 * new_loss.vel + 10 * new_loss.direction + new_loss.h
+    # loss_final = new_loss.distance + new_loss.h
+
+    return loss_final, new_loss
+
 def agile_lossVer2(loss:AgileLoss, quad_state, tar_state, tar_h, tar_ori, tar_dis, step, dt, init_vec):
     """
     
@@ -81,9 +142,9 @@ def agile_lossVer2(loss:AgileLoss, quad_state, tar_state, tar_h, tar_ori, tar_di
     # new_loss.distance = (loss.distance * step * 0.9 + loss_distance) / (step + 1)
     new_loss.distance = loss_distance.clone()
     
-    # loss_h = torch.abs(quad_state[:, 2] - tar_h)
+    loss_h = torch.abs(quad_state[:, 2] - tar_h)
     # new_loss.h = (loss.h * step * 0.9 + loss_h) / (step + 1)
-    # new_loss.h = loss_h.clone()
+    new_loss.h = loss_h.clone()
     
     # pitch and roll are expected to be zero
     # loss_ori = torch.norm(tar_ori[:, :2] - ori[:, :2], dim=1, p=2)
@@ -95,7 +156,8 @@ def agile_lossVer2(loss:AgileLoss, quad_state, tar_state, tar_h, tar_ori, tar_di
     # action(body rate) ---> ori & acc ---> vel ---> pos
     # loss_final = new_loss.direction + new_loss.h * 10 + new_loss.ori + new_loss.distance + new_loss.vel
     # loss_final = new_loss.ori + new_loss.distance# + new_loss.direction
-    loss_final = new_loss.ori + new_loss.distance + new_loss.vel + new_loss.direction
+    # loss_final = new_loss.ori + new_loss.distance + new_loss.vel + new_loss.direction + new_loss.h * 2
+    loss_final = new_loss.distance + new_loss.h * 2
 
     return loss_final, new_loss
 

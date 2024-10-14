@@ -22,7 +22,7 @@ sys.path.append('/home/wangzimo/VTT/VTT')
 from aerial_gym.envs import *
 from aerial_gym.utils import task_registry, velh_lossVer5, agile_lossVer1, AgileLoss, agile_lossVer2
 from aerial_gym.models import TrackAgileModuleVer0, TrackGroundModelVer6
-from aerial_gym.envs import IsaacGymOriDynamics, NewtonDynamics
+from aerial_gym.envs import IsaacGymDynamics, NewtonDynamics
 # os.path.basename(__file__).rstrip(".py")
 from pytorch3d.transforms import euler_angles_to_matrix
 
@@ -41,7 +41,7 @@ def get_args():
         {"name": "--seed", "type": int, "default": 142, "help": "Random seed. Overrides config file if provided."},
 
         # train setting
-        {"name": "--learning_rate", "type":float, "default": 5.6e-5,
+        {"name": "--learning_rate", "type":float, "default": 1.6e-6,
             "help": "the learning rate of the optimizer"},
         {"name": "--batch_size", "type":int, "default": 1024,
             "help": "batch size of training. Notice that batch_size should be equal to num_envs"},
@@ -49,7 +49,7 @@ def get_args():
             "help": "num worker of dataloader"},
         {"name": "--num_epoch", "type":int, "default": 1520,
             "help": "num of epoch"},
-        {"name": "--len_sample", "type":int, "default": 1950,
+        {"name": "--len_sample", "type":int, "default": 150,
             "help": "length of a sample"},
         {"name": "--tmp", "type": bool, "default": False, "help": "Set false to officially save the trainning log"},
         {"name": "--gamma", "type":int, "default": 0.8,
@@ -60,7 +60,7 @@ def get_args():
             "help": "learning rate will decrease every step_size steps"},
 
         # model setting
-        {"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer3_stay_rotate.pth',
+        {"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer0.pth',
             "help": "The path to model parameters"},
         {"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer0.pth',
             "help": "The path to model parameters"},
@@ -120,7 +120,7 @@ if __name__ == "__main__":
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
-    dynamic = IsaacGymOriDynamics()
+    dynamic = IsaacGymDynamics()
     
     # model = TrackAgileModuleVer0(device=device).to(device)
     model = TrackGroundModelVer6(device=device).to(device)
@@ -244,8 +244,12 @@ if __name__ == "__main__":
                 writer.add_scalar(f'Acceleration/Y', acceleration[0, 1], step)
                 writer.add_scalar(f'Acceleration/Z', acceleration[0, 2], step)
                 writer.add_scalar(f'Horizon Distance', horizon_dis, step)
+                writer.add_scalar(f'Target Position/X', tar_pos[0, 0], step)
+                writer.add_scalar(f'Target Position/Y', tar_pos[0, 1], step)
                 writer.add_scalar(f'Position/X', now_quad_state[0, 0], step)
                 writer.add_scalar(f'Position/Y', now_quad_state[0, 1], step)
+                writer.add_scalar(f'Velocity/X', now_quad_state[0, 6], step)
+                writer.add_scalar(f'Velocity/Y', now_quad_state[0, 7], step)
                 writer.add_scalar(f'Distance/X', tar_pos[0, 0] - now_quad_state[0, 0], step)
                 writer.add_scalar(f'Distance/Y', tar_pos[0, 1] - now_quad_state[0, 1], step)
                 writer.add_scalar(f'Action/F', action[0, 0], step)

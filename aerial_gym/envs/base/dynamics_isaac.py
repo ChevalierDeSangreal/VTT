@@ -204,7 +204,7 @@ class IsaacGymDynamics(MyDynamics):
         # action is normalized between -1 and 1 --> rescale
         total_thrust = action[:, 0] * (2 * self.mass * (self.torch_gravity[2])) + self.mass * (-self.torch_gravity[2])
         # total_thrust = action[:, 0] * 7.5 + self.mass * (-self.torch_gravity[2])
-        body_rates = action[:, 1:] * .5
+        body_rates = action[:, 1:] * 3
 
         # ctl_dt ist simulation time,
         # remainer wird immer -sim_dt gemacht in jedem loop
@@ -236,7 +236,7 @@ class IsaacGymDynamics(MyDynamics):
         total_thrust = action[:, 0] * (2 * self.mass * (self.torch_gravity[2])) + self.mass * (-self.torch_gravity[2])
         # print(total_thrust.shape)
         # total_thrust = action[:, 0] * 7.5 + self.mass * (-self.torch_gravity[2])
-        body_rates = action[:, 1:] * .5
+        body_rates = action[:, 1:] * 3
 
         # ctl_dt ist simulation time,
         # remainer wird immer -sim_dt gemacht in jedem loop

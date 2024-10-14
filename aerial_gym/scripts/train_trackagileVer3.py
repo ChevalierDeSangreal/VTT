@@ -42,7 +42,7 @@ def get_args():
         {"name": "--seed", "type": int, "default": 42, "help": "Random seed. Overrides config file if provided."},
 
         # train setting
-        {"name": "--learning_rate", "type":float, "default": 5.6e-5,
+        {"name": "--learning_rate", "type":float, "default": 1.6e-6,
             "help": "the learning rate of the optimizer"},
         {"name": "--batch_size", "type":int, "default": 512,
             "help": "batch size of training. Notice that batch_size should be equal to num_envs"},
@@ -50,7 +50,7 @@ def get_args():
             "help": "num worker of dataloader"},
         {"name": "--num_epoch", "type":int, "default": 1520,
             "help": "num of epoch"},
-        {"name": "--len_sample", "type":int, "default": 1600,
+        {"name": "--len_sample", "type":int, "default": 105,
             "help": "length of a sample"},
         {"name": "--tmp", "type": bool, "default": False, "help": "Set false to officially save the trainning log"},
         {"name": "--gamma", "type":int, "default": 0.8,
@@ -123,12 +123,12 @@ if __name__ == "__main__":
     torch.manual_seed(args.seed)
 
     # dynamic = IsaacGymDynamics()
-    dynamic = IsaacGymOriDynamics()
+    dynamic = IsaacGymDynamics()
     
     # model = TrackAgileModuleVer0(device=device).to(device)
     model = TrackGroundModelVer6(device=device).to(device)
-    # checkpoint = torch.load(args.param_load_path, map_location=device)
-    # model.load_state_dict(checkpoint)
+    checkpoint = torch.load(args.param_load_path, map_location=device)
+    model.load_state_dict(checkpoint)
 
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, eps=1e-5)
     criterion = nn.MSELoss(reduction='none')

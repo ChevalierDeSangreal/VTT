@@ -19,7 +19,7 @@ import sys
 sys.path.append('/home/wangzimo/VTT/VTT')
 # print(sys.path)
 from aerial_gym.envs import *
-from aerial_gym.utils import task_registry, velh_lossVer5, agile_lossVer1, AgileLoss, agile_lossVer2
+from aerial_gym.utils import task_registry, velh_lossVer5, agile_lossVer1, AgileLoss, agile_lossVer3
 from aerial_gym.models import TrackAgileModuleVer0, TrackGroundModelVer6
 from aerial_gym.envs import IsaacGymDynamics, NewtonDynamics, IsaacGymOriDynamics
 # os.path.basename(__file__).rstrip(".py")
@@ -42,7 +42,7 @@ def get_args():
         {"name": "--seed", "type": int, "default": 42, "help": "Random seed. Overrides config file if provided."},
 
         # train setting
-        {"name": "--learning_rate", "type":float, "default": 1.6e-5,
+        {"name": "--learning_rate", "type":float, "default": 1.6e-6,
             "help": "the learning rate of the optimizer"},
         {"name": "--batch_size", "type":int, "default": 1024,
             "help": "batch size of training. Notice that batch_size should be equal to num_envs"},
@@ -161,7 +161,7 @@ if __name__ == "__main__":
         reset_buf = torch.zeros((args.batch_size,))
         
         num_reset = 0
-        tar_state = now_quad_state.clone().detach()
+        tar_state = envs.get_tar_state().detach()
         # train
         for step in range(args.len_sample):
 
@@ -189,7 +189,7 @@ if __name__ == "__main__":
             # print("Label:0")
             new_state_dyn, acceleration = dynamic(now_quad_state, action, envs.cfg.sim.dt)
             # print("Label:0.25")
-            new_state_sim, tmp_tar_state = envs.step(new_state_dyn.detach())
+            new_state_sim, tar_state = envs.step(new_state_dyn.detach())
             # print("Label:0.5")
             tar_pos = tar_state[:, :3].detach()
             
@@ -209,7 +209,8 @@ if __name__ == "__main__":
             # loss, loss_direction, loss_speed, loss_h, loss_ori = space_lossVer4(now_quad_state, tar_state, tar_pos, 7, tar_ori)
             # loss, loss_direction, loss_speed, loss_ori, loss_h = velh_lossVer5(now_quad_state, tar_pos, 7, tar_ori)
             # loss, loss_direction, loss_distance, loss_velocity, loss_ori, loss_h = agile_lossVer1(now_quad_state, tar_state, 7, tar_ori, 1, step, envs.cfg.sim.dt, init_vec)
-            loss, new_loss = agile_lossVer2(old_loss, now_quad_state, tar_state, 7, tar_ori, 1, timer, envs.cfg.sim.dt, init_vec)
+            # @@@@@@@@@@
+            loss, new_loss = agile_lossVer3(old_loss, now_quad_state, tar_state, 7, tar_ori, 1, timer, envs.cfg.sim.dt, init_vec)
             old_loss = new_loss
             # print("Label:2")
             
@@ -226,6 +227,7 @@ if __name__ == "__main__":
                 now_quad_state = now_quad_state.detach()
                 old_loss = AgileLoss(args.batch_size, device=device)
                 input_buffer = input_buffer.detach()
+                timer = timer * 0
 
         ave_loss_direciton = torch.sum(new_loss.direction) / args.batch_size
         ave_loss_distance = torch.sum(new_loss.distance) / args.batch_size
