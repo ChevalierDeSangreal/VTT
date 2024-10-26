@@ -21,7 +21,7 @@ sys.path.append('/home/wangzimo/VTT/VTT')
 from aerial_gym.envs import *
 from aerial_gym.utils import task_registry, velh_lossVer5, agile_lossVer1, AgileLoss, agile_lossVer3
 from aerial_gym.models import TrackAgileModuleVer0, TrackGroundModelVer6
-from aerial_gym.envs import IsaacGymDynamics, NewtonDynamics, IsaacGymOriDynamics
+from aerial_gym.envs import IsaacGymDynamics, NewtonDynamics, IsaacGymOriDynamics, NRIsaacGymDynamics
 # os.path.basename(__file__).rstrip(".py")
 
 
@@ -50,7 +50,7 @@ def get_args():
             "help": "num worker of dataloader"},
         {"name": "--num_epoch", "type":int, "default": 1520,
             "help": "num of epoch"},
-        {"name": "--len_sample", "type":int, "default": 500,
+        {"name": "--len_sample", "type":int, "default": 650,
             "help": "length of a sample"},
         {"name": "--tmp", "type": bool, "default": False, "help": "Set false to officially save the trainning log"},
         {"name": "--gamma", "type":int, "default": 0.8,
@@ -127,8 +127,8 @@ if __name__ == "__main__":
 
     model = TrackAgileModuleVer0(device=device).to(device)
     # model = TrackGroundModelVer6(device=device).to(device)
-    # checkpoint = torch.load(args.param_load_path, map_location=device)
-    # model.load_state_dict(checkpoint)
+    checkpoint = torch.load(args.param_load_path, map_location=device)
+    model.load_state_dict(checkpoint)
 
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, eps=1e-5)
     criterion = nn.MSELoss(reduction='none')
@@ -209,7 +209,7 @@ if __name__ == "__main__":
             # loss, loss_direction, loss_speed, loss_h, loss_ori = space_lossVer4(now_quad_state, tar_state, tar_pos, 7, tar_ori)
             # loss, loss_direction, loss_speed, loss_ori, loss_h = velh_lossVer5(now_quad_state, tar_pos, 7, tar_ori)
             # loss, loss_direction, loss_distance, loss_velocity, loss_ori, loss_h = agile_lossVer1(now_quad_state, tar_state, 7, tar_ori, 1, step, envs.cfg.sim.dt, init_vec)
-            # @@@@@@@@@@
+
             loss, new_loss = agile_lossVer3(old_loss, now_quad_state, tar_state, 7, tar_ori, 1, timer, envs.cfg.sim.dt, init_vec)
             old_loss = new_loss
             # print("Label:2")
@@ -220,7 +220,7 @@ if __name__ == "__main__":
             timer = timer + 1
             timer[reset_idx] = 0
 
-            if not (step + 1) % 50:
+            if not (step + 1) % 300:
                 loss.backward(not_reset_buf)
                 optimizer.step()
                 optimizer.zero_grad()

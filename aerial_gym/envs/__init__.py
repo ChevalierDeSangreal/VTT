@@ -11,7 +11,7 @@ from .base.track_ground_config import TrackGroundCfg
 from .base.track_space_config import TrackSpaceCfg
 from .base.track_space_config2 import TrackSpaceCfgVer2
 from .base.track_agile_config import TrackAgileCfg
-from .base.dynamics_isaac import IsaacGymDynamics
+from .base.dynamics_isaac import IsaacGymDynamics, NRIsaacGymDynamics
 from .base.dynamics_newton import NewtonDynamics
 from .base.dynamics_simple import SimpleDynamics, NRSimpleDynamics
 from .base.dynamics_isaac_origin import IsaacGymOriDynamics

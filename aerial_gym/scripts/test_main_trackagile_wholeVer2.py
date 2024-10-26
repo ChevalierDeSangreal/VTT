@@ -47,9 +47,9 @@ def get_args():
             "help": "batch size of training. Notice that batch_size should be equal to num_envs"},
         {"name": "--num_worker", "type":int, "default": 4,
             "help": "num worker of dataloader"},
-        {"name": "--num_epoch", "type":int, "default": 1520,
+        {"name": "--num_epoch", "type":int, "default": 520,
             "help": "num of epoch"},
-        {"name": "--len_sample", "type":int, "default": 150,
+        {"name": "--len_sample", "type":int, "default": 1005,
             "help": "length of a sample"},
         {"name": "--tmp", "type": bool, "default": False, "help": "Set false to officially save the trainning log"},
         {"name": "--gamma", "type":int, "default": 0.8,
@@ -186,7 +186,7 @@ if __name__ == "__main__":
                 # print("Label:0.25")
                 new_state_sim, tar_state = envs.step(new_state_dyn.detach())
                 # tmp = envs.get_camera_output()
-                # x = envs.save_camera_output(file_name=f'{step}.png')
+                x = envs.save_camera_output(file_name=f'{step}.png', idx=0)
                 # print("Label:0.5")
                 tar_pos = tar_state[:, :3].detach()
                 
@@ -230,7 +230,7 @@ if __name__ == "__main__":
                 theta_degrees = theta * 180.0 / torch.pi
                 
                 item_tested = 3
-                horizon_dis = torch.norm(now_quad_state[item_tested, :2] - tar_pos[item_tested, :2], dim=0, p=2)
+                horizon_dis = torch.norm(now_quad_state[item_tested, :2] - tar_pos[item_tested, :2], dim=0, p=4)
                 speed = torch.norm(now_quad_state[item_tested, 6:9], dim=0, p=2)
 
                 if reset_buf[item_tested]:

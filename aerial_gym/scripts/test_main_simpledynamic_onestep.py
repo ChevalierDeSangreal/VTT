@@ -36,7 +36,7 @@ torch.autograd.set_detect_anomaly(True)
 
 def get_args():
     custom_parameters = [
-        {"name": "--task", "type": str, "default": "track_spaceVer3", "help": "The name of the task."},
+        {"name": "--task", "type": str, "default": "track_spaceVer2", "help": "The name of the task."},
         {"name": "--experiment_name", "type": str, "default": "test_simple_dynamics_5e5lr_1024b_1500epoch_onestep", "help": "Name of the experiment to run or load."},
         {"name": "--headless", "action": "store_true", "help": "Force display off at all times"},
         {"name": "--horovod", "action": "store_true", "default": False, "help": "Use horovod for multi-gpu training"},
@@ -44,7 +44,7 @@ def get_args():
         {"name": "--seed", "type": int, "default": 15642, "help": "Random seed. Overrides config file if provided."},
 
         # train setting
-        {"name": "--learning_rate", "type":float, "default": 5.6e-5,
+        {"name": "--learning_rate", "type":float, "default": 1.6e-6,
             "help": "the learning rate of the optimizer"},
         {"name": "--batch_size", "type":int, "default": 1024,
             "help": "batch size of training. Notice that batch_size should be equal to num_envs"},
@@ -52,7 +52,7 @@ def get_args():
             "help": "num worker of dataloader"},
         {"name": "--num_epoch", "type":int, "default": 1502,
             "help": "num of epoch"},
-        {"name": "--len_sample", "type":int, "default": 199,
+        {"name": "--len_sample", "type":int, "default": 599,
             "help": "length of a sample"},
         {"name": "--tmp", "type": bool, "default": False, "help": "Set false to officially save the trainning log"},
         {"name": "--gamma", "type":int, "default": 0.8,
@@ -193,6 +193,7 @@ if __name__ == "__main__":
 
                 # if (step + 1) % 50 == 0:
                 reset_buf, reset_idx = envs.check_reset_out()
+                x = envs.save_camera_output(file_name=f'{step}.png', idx=0)
                 # if len(reset_idx):
                 #     print(f"On step {step}, reset {reset_idx}")
                 not_reset_buf = torch.logical_not(reset_buf)

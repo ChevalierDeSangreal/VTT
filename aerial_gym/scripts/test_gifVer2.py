@@ -5,7 +5,6 @@ import os
 import random
 import time
 
-import gym
 import isaacgym  # noqa
 from isaacgym import gymutil
 from isaacgym.torch_utils import *

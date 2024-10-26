@@ -38,19 +38,19 @@ def get_args():
         {"name": "--experiment_name", "type": str, "default": "track_agileVer0", "help": "Name of the experiment to run or load."},
         {"name": "--headless", "action": "store_true", "help": "Force display off at all times"},
         {"name": "--horovod", "action": "store_true", "default": False, "help": "Use horovod for multi-gpu training"},
-        {"name": "--num_envs", "type": int, "default": 512, "help": "Number of environments to create. Batch size will be equal to this"},
+        {"name": "--num_envs", "type": int, "default": 1024, "help": "Number of environments to create. Batch size will be equal to this"},
         {"name": "--seed", "type": int, "default": 42, "help": "Random seed. Overrides config file if provided."},
 
         # train setting
-        {"name": "--learning_rate", "type":float, "default": 1.6e-6,
+        {"name": "--learning_rate", "type":float, "default": 1.6e-7,
             "help": "the learning rate of the optimizer"},
-        {"name": "--batch_size", "type":int, "default": 512,
+        {"name": "--batch_size", "type":int, "default": 1024,
             "help": "batch size of training. Notice that batch_size should be equal to num_envs"},
         {"name": "--num_worker", "type":int, "default": 4,
             "help": "num worker of dataloader"},
         {"name": "--num_epoch", "type":int, "default": 1520,
             "help": "num of epoch"},
-        {"name": "--len_sample", "type":int, "default": 105,
+        {"name": "--len_sample", "type":int, "default": 1603,
             "help": "length of a sample"},
         {"name": "--tmp", "type": bool, "default": False, "help": "Set false to officially save the trainning log"},
         {"name": "--gamma", "type":int, "default": 0.8,
@@ -61,9 +61,9 @@ def get_args():
             "help": "learning rate will decrease every step_size steps"},
 
         # model setting
-        {"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer0.pth',
+        {"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer3.pth',
             "help": "The path to model parameters"},
-        {"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer0.pth',
+        {"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer3.pth',
             "help": "The path to model parameters"},
         
         ]
@@ -127,8 +127,8 @@ if __name__ == "__main__":
     
     # model = TrackAgileModuleVer0(device=device).to(device)
     model = TrackGroundModelVer6(device=device).to(device)
-    checkpoint = torch.load(args.param_load_path, map_location=device)
-    model.load_state_dict(checkpoint)
+    # checkpoint = torch.load(args.param_load_path, map_location=device)
+    # model.load_state_dict(checkpoint)
 
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, eps=1e-5)
     criterion = nn.MSELoss(reduction='none')
@@ -209,7 +209,7 @@ if __name__ == "__main__":
             # loss, loss_direction, loss_speed, loss_h, loss_ori = space_lossVer4(now_quad_state, tar_state, tar_pos, 7, tar_ori)
             # loss, loss_direction, loss_speed, loss_ori, loss_h = velh_lossVer5(now_quad_state, tar_pos, 7, tar_ori)
             # loss, loss_direction, loss_distance, loss_velocity, loss_ori, loss_h = agile_lossVer1(now_quad_state, tar_state, 7, tar_ori, 1, step, envs.cfg.sim.dt, init_vec)
-            loss, new_loss = agile_lossVer2(old_loss, now_quad_state, tar_state, 7, tar_ori, 1, timer, envs.cfg.sim.dt, init_vec)
+            loss, new_loss = agile_lossVer2(old_loss, now_quad_state, tar_state, 7, tar_ori, 0, timer, envs.cfg.sim.dt, init_vec)
             old_loss = new_loss
             # print("Label:2")
             

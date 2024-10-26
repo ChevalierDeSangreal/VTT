@@ -89,7 +89,9 @@ def agile_lossVer3(loss:AgileLoss, quad_state, tar_state, tar_h, tar_ori, tar_di
     
     # pitch and roll are expected to be zero
     # loss_ori = torch.norm(tar_ori[:, :2] - ori[:, :2], dim=1, p=2)
-    loss_ori = torch.norm(tar_ori - ori, dim=1, p=2)
+    # loss_ori = torch.norm(tar_ori - ori, dim=1, p=2) - 6
+    # loss_ori = torch.norm(tar_ori - ori, dim=1, p=2)
+    loss_ori = 100 / (100 - 99 * direction_vector[:, 2])
     new_loss.ori = (loss.ori * step + loss_ori) / (step + 1)
     # new_loss.ori = loss_ori.clone()
 
@@ -98,7 +100,7 @@ def agile_lossVer3(loss:AgileLoss, quad_state, tar_state, tar_h, tar_ori, tar_di
     # loss_final = new_loss.direction + new_loss.h * 10 + new_loss.ori + new_loss.distance + new_loss.vel
     # loss_final = new_loss.ori + new_loss.distance# + new_loss.direction
 
-    loss_final = 0.1 * new_loss.ori + 5 * new_loss.distance + 0.5 * new_loss.vel + 10 * new_loss.direction + new_loss.h
+    loss_final = 1 * new_loss.ori + 0.5 * new_loss.distance + 1 * new_loss.vel + 1 * new_loss.direction + 1 * new_loss.h
     # loss_final = new_loss.distance + new_loss.h
 
     return loss_final, new_loss
@@ -148,7 +150,9 @@ def agile_lossVer2(loss:AgileLoss, quad_state, tar_state, tar_h, tar_ori, tar_di
     
     # pitch and roll are expected to be zero
     # loss_ori = torch.norm(tar_ori[:, :2] - ori[:, :2], dim=1, p=2)
-    loss_ori = torch.norm(tar_ori - ori, dim=1, p=2)
+    # loss_ori = torch.norm(tar_ori - ori, dim=1, p=2)
+    loss_ori = 100 / (100 - 99 * direction_vector[:, 2])
+    # new_loss.ori = (loss.ori * step + loss_ori) / (step + 1)
     # new_loss.ori = (loss.ori * step * 0.9 + loss_ori) / (step + 1)
     new_loss.ori = loss_ori.clone()
 
@@ -157,7 +161,7 @@ def agile_lossVer2(loss:AgileLoss, quad_state, tar_state, tar_h, tar_ori, tar_di
     # loss_final = new_loss.direction + new_loss.h * 10 + new_loss.ori + new_loss.distance + new_loss.vel
     # loss_final = new_loss.ori + new_loss.distance# + new_loss.direction
     # loss_final = new_loss.ori + new_loss.distance + new_loss.vel + new_loss.direction + new_loss.h * 2
-    loss_final = new_loss.distance + new_loss.h * 2
+    loss_final = new_loss.distance * 10 + new_loss.h * 20 + new_loss.ori + new_loss.direction * 1# + 10 * new_loss.ori
 
     return loss_final, new_loss
 

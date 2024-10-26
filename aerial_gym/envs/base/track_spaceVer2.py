@@ -116,37 +116,7 @@ class TrackSpaceVer2(BaseTask):
         self.count_step = torch.zeros((self.num_envs, ), dtype=torch.long, device=self.device)
         
         
-    def render(self, sync_frame_time=True):
-        # print("##### 5.1")
-        # Fetch results
-        self.gym.fetch_results(self.sim, True) # use only when device is not "cpu"
-        # Step graphics. Skipping this causes the onboard robot camera tensors to not be updated
-        # print("##### 5.2")
-        # self.gym.step_graphics(self.sim)
-        # # print("##### 5.3")
-        # self.gym.render_all_camera_sensors(self.sim)
-        # print("##### 5.4")
-        # if viewer exists update it based on requirement
-        if self.viewer:
-            # print("##### 5.5")
-            # check for window closed
-            if self.gym.query_viewer_has_closed(self.viewer):
-                sys.exit()
 
-            # check for keyboard events
-            for evt in self.gym.query_viewer_action_events(self.viewer):
-                if evt.action == "QUIT" and evt.value > 0:
-                    sys.exit()
-                elif evt.action == "toggle_viewer_sync" and evt.value > 0:
-                    self.enable_viewer_sync = not self.enable_viewer_sync
-
-            # update viewer based on requirement
-            if self.enable_viewer_sync:
-                self.gym.draw_viewer(self.viewer, self.sim, True)
-                if sync_frame_time:
-                    self.gym.sync_frame_time(self.sim)
-            else:
-                self.gym.poll_viewer_events(self.viewer)
 
     def create_sim(self):
         self.sim = self.gym.create_sim(
@@ -434,11 +404,11 @@ class TrackSpaceVer2(BaseTask):
         self.gym.end_access_image_tensors(self.sim)
         # print(tmp_camera_dep_root_tensors.device)
         return tmp_camera_dep_root_tensors
-
-    def save_camera_output(self, file_name="tmp.png", file_path="/home/lab929/wzm/FYP/AGAPG/aerial_gym/scripts/camera_output/"):
+    
+    def save_camera_output(self, file_name="tmp.png", file_path="/home/wangzimo/VTT/VTT/aerial_gym/scripts/camera_output/frames/", idx=0):
         filepath = file_path + file_name
-        self.gym.write_camera_image_to_file(self.sim, self.envs[1], self.camera_handles[1], gymapi.IMAGE_COLOR, filepath)
-        return self.gym.get_camera_image(self.sim, self.envs[1], self.camera_handles[1], gymapi.IMAGE_COLOR)
+        self.gym.write_camera_image_to_file(self.sim, self.envs[idx], self.camera_handles[idx], gymapi.IMAGE_COLOR, filepath)
+        return self.gym.get_camera_image(self.sim, self.envs[idx], self.camera_handles[idx], gymapi.IMAGE_COLOR)
     
     
     def get_quad_state(self):
@@ -559,3 +529,34 @@ class TrackSpaceVer2(BaseTask):
     
 
 
+    def render(self, sync_frame_time=True):
+        # print("##### 5.1")
+        # Fetch results
+        self.gym.fetch_results(self.sim, True) # use only when device is not "cpu"
+        # Step graphics. Skipping this causes the onboard robot camera tensors to not be updated
+        # print("##### 5.2")
+        self.gym.step_graphics(self.sim)
+        # print("##### 5.3")
+        self.gym.render_all_camera_sensors(self.sim)
+        # print("##### 5.4")
+        # if viewer exists update it based on requirement
+        if self.viewer:
+            # print("##### 5.5")
+            # check for window closed
+            if self.gym.query_viewer_has_closed(self.viewer):
+                sys.exit()
+
+            # check for keyboard events
+            for evt in self.gym.query_viewer_action_events(self.viewer):
+                if evt.action == "QUIT" and evt.value > 0:
+                    sys.exit()
+                elif evt.action == "toggle_viewer_sync" and evt.value > 0:
+                    self.enable_viewer_sync = not self.enable_viewer_sync
+
+            # update viewer based on requirement
+            if self.enable_viewer_sync:
+                self.gym.draw_viewer(self.viewer, self.sim, True)
+                if sync_frame_time:
+                    self.gym.sync_frame_time(self.sim)
+            else:
+                self.gym.poll_viewer_events(self.viewer)
