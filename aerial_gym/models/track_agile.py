@@ -36,9 +36,9 @@ class TrackAgileModuleVer0(nn.Module):
         return x
 
 
-class TrackAgileModuleVer0(nn.Module):
-    def __init__(self, input_size=9+3, hidden_size=64, output_size=4, num_layers=2, device='cpu'):
-        super(TrackAgileModuleVer0, self).__init__()
+class TrackAgileModuleVer1(nn.Module):
+    def __init__(self, input_size=9+3, hidden_size=256, output_size=4, num_layers=2, device='cpu'):
+        super(TrackAgileModuleVer1, self).__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.gru = nn.GRU(input_size, hidden_size, num_layers).to(device)

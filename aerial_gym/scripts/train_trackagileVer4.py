@@ -19,38 +19,37 @@ import sys
 sys.path.append('/home/wangzimo/VTT/VTT')
 # print(sys.path)
 from aerial_gym.envs import *
-from aerial_gym.utils import task_registry, velh_lossVer5, agile_lossVer1, AgileLoss, agile_lossVer2
-from aerial_gym.models import TrackAgileModuleVer0, TrackGroundModelVer6
-from aerial_gym.envs import IsaacGymDynamics, NewtonDynamics, IsaacGymOriDynamics
+from aerial_gym.utils import task_registry, velh_lossVer5, agile_lossVer1, AgileLoss, agile_lossVer4
+from aerial_gym.models import TrackAgileModuleVer0, TrackGroundModelVer6, TrackAgileModuleVer1
+from aerial_gym.envs import IsaacGymDynamics, NewtonDynamics, IsaacGymOriDynamics, NRIsaacGymDynamics
 # os.path.basename(__file__).rstrip(".py")
 
 
 """
-Based on trackagileVer1.py
-Trying to stay at initial position
-Only rotate to desired direction
+Based on trackagileVer2.py
+Using a Larger Model
 """
 
 
 def get_args():
     custom_parameters = [
-        {"name": "--task", "type": str, "default": "track_agileVer0", "help": "The name of the task."},
-        {"name": "--experiment_name", "type": str, "default": "track_agileVer0", "help": "Name of the experiment to run or load."},
+        {"name": "--task", "type": str, "default": "track_agileVer1", "help": "The name of the task."},
+        {"name": "--experiment_name", "type": str, "default": "track_agileVer1", "help": "Name of the experiment to run or load."},
         {"name": "--headless", "action": "store_true", "help": "Force display off at all times"},
         {"name": "--horovod", "action": "store_true", "default": False, "help": "Use horovod for multi-gpu training"},
         {"name": "--num_envs", "type": int, "default": 1024, "help": "Number of environments to create. Batch size will be equal to this"},
         {"name": "--seed", "type": int, "default": 42, "help": "Random seed. Overrides config file if provided."},
 
         # train setting
-        {"name": "--learning_rate", "type":float, "default": 1.6e-6,
+        {"name": "--learning_rate", "type":float, "default": 1.6e-5,
             "help": "the learning rate of the optimizer"},
         {"name": "--batch_size", "type":int, "default": 1024,
             "help": "batch size of training. Notice that batch_size should be equal to num_envs"},
         {"name": "--num_worker", "type":int, "default": 4,
             "help": "num worker of dataloader"},
-        {"name": "--num_epoch", "type":int, "default": 1520,
+        {"name": "--num_epoch", "type":int, "default": 2520,
             "help": "num of epoch"},
-        {"name": "--len_sample", "type":int, "default": 603,
+        {"name": "--len_sample", "type":int, "default": 650,
             "help": "length of a sample"},
         {"name": "--tmp", "type": bool, "default": False, "help": "Set false to officially save the trainning log"},
         {"name": "--gamma", "type":int, "default": 0.8,
@@ -61,9 +60,9 @@ def get_args():
             "help": "learning rate will decrease every step_size steps"},
 
         # model setting
-        {"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer3.pth',
+        {"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer4.pth',
             "help": "The path to model parameters"},
-        {"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer3.pth',
+        {"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer4.pth',
             "help": "The path to model parameters"},
         
         ]
@@ -124,9 +123,9 @@ if __name__ == "__main__":
 
     # dynamic = IsaacGymDynamics()
     dynamic = IsaacGymDynamics()
-    
-    # model = TrackAgileModuleVer0(device=device).to(device)
-    model = TrackGroundModelVer6(device=device).to(device)
+
+    model = TrackAgileModuleVer1(device=device).to(device)
+    # model = TrackGroundModelVer6(device=device).to(device)
     checkpoint = torch.load(args.param_load_path, map_location=device)
     model.load_state_dict(checkpoint)
 
@@ -154,6 +153,7 @@ if __name__ == "__main__":
 
         reset_buf = None
         now_quad_state = envs.reset(reset_buf=reset_buf).detach()
+        
         if torch.isnan(now_quad_state[:, 3:6]).any():
             # print(input_buffer[max(step+1-args.slide_size, 0):step+1])
             print("Nan detected in early input!!!")
@@ -161,7 +161,7 @@ if __name__ == "__main__":
         reset_buf = torch.zeros((args.batch_size,))
         
         num_reset = 0
-        tar_state = envs.get_tar_state()
+        tar_state = envs.get_tar_state().detach()
         # train
         for step in range(args.len_sample):
 
@@ -179,8 +179,8 @@ if __name__ == "__main__":
                 # print(input_buffer[max(step+1-args.slide_size, 0):step+1])
                 print("Nan detected in input!!!")
                 exit(0)
-            # action = model(input_buffer.clone())
-            action = model(now_quad_state[:, 3:], rel_dis)
+            action = model(input_buffer.clone())
+            # action = model(now_quad_state[:, 3:], rel_dis)
             # print(action.shape)
             if torch.isnan(action).any():
                 print("Nan detected in action!!!")
@@ -189,7 +189,7 @@ if __name__ == "__main__":
             # print("Label:0")
             new_state_dyn, acceleration = dynamic(now_quad_state, action, envs.cfg.sim.dt)
             # print("Label:0.25")
-            new_state_sim, tmp_tar_state = envs.step(new_state_dyn.detach())
+            new_state_sim, tar_state = envs.step(new_state_dyn.detach())
             # print("Label:0.5")
             tar_pos = tar_state[:, :3].detach()
             
@@ -209,7 +209,8 @@ if __name__ == "__main__":
             # loss, loss_direction, loss_speed, loss_h, loss_ori = space_lossVer4(now_quad_state, tar_state, tar_pos, 7, tar_ori)
             # loss, loss_direction, loss_speed, loss_ori, loss_h = velh_lossVer5(now_quad_state, tar_pos, 7, tar_ori)
             # loss, loss_direction, loss_distance, loss_velocity, loss_ori, loss_h = agile_lossVer1(now_quad_state, tar_state, 7, tar_ori, 1, step, envs.cfg.sim.dt, init_vec)
-            loss, new_loss = agile_lossVer2(old_loss, now_quad_state, tar_state, 7, tar_ori, 5, timer, envs.cfg.sim.dt, init_vec)
+
+            loss, new_loss = agile_lossVer4(old_loss, now_quad_state, tar_state, 7, tar_ori, 2, timer, envs.cfg.sim.dt, init_vec)
             old_loss = new_loss
             # print("Label:2")
             
@@ -226,7 +227,7 @@ if __name__ == "__main__":
                 now_quad_state = now_quad_state.detach()
                 old_loss = AgileLoss(args.batch_size, device=device)
                 input_buffer = input_buffer.detach()
-                timer = torch.zeros((args.batch_size,), device=device)
+                timer = timer * 0
 
         ave_loss_direciton = torch.sum(new_loss.direction) / args.batch_size
         ave_loss_distance = torch.sum(new_loss.distance) / args.batch_size

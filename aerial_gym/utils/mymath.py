@@ -24,5 +24,19 @@ def rand_circle_point(batch_size, r, device):
     # print(torch.stack([x, y], dim=1), torch.initial_seed())
     return torch.stack([x, y], dim=1)
 
+def set_circle_point(batch_size, r, device, thetas):
+    """
+    Generate a position on the circle
+    r is the radius of circle
+    thetas is the direction
+    thetas should be [0, 2pi]
+    """
+    # thetas = torch.rand(batch_size, device=device) * 2 * torch.tensor(np.pi, device=device)
+    thetas = thetas * torch.ones(batch_size, device=device) /180 * torch.tensor(np.pi, device=device)
+    x = r * torch.cos(thetas)
+    y = r * torch.sin(thetas)
+    # print(torch.stack([x, y], dim=1), torch.initial_seed())
+    return torch.stack([x, y], dim=1)
+
 # if __name__ == "__main__":
 #     print(rand_circle_point(2, 5, 'cuda:0'))

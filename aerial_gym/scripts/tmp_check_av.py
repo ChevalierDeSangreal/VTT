@@ -23,7 +23,7 @@ if __name__ == "__main__":
     state = torch.tensor(state).to(device)
     # state = [2, 3, 4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     dyn = IsaacGymDynamics()
-    num_step = 500
+    num_step = 100
     init_vec = torch.tensor([[1.0, 0.0, 0.0]], device=device).unsqueeze(-1)
     for step in range(num_step):
         state, acceleration = dyn.simulate_quadrotor(
@@ -36,7 +36,7 @@ if __name__ == "__main__":
         rotation_matrices = euler_angles_to_matrix(ori, convention='XYZ')
         direction_vector = rotation_matrices @ init_vec
         direction_vector = direction_vector.squeeze()
-        if not (step % 10): 
+        if not (step % 5): 
             print("======================")
             print(f"Step {step + 1}: new state flightmare", state)
             print(f"Step {step + 1}: direction vec {direction_vector}")

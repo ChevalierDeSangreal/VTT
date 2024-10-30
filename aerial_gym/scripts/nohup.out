@@ -1,0 +1,16 @@
+Importing module 'gym_38' (/home/wangzimo/VTT/isaacgym/python/isaacgym/_bindings/linux-x86_64/gym_38.so)
+Setting GYM_USD_PLUG_INFO_PATH to /home/wangzimo/VTT/isaacgym/python/isaacgym/_bindings/linux-x86_64/usd/plugInfo.json
+AERIAL_GYM_ROOT_DIR /home/wangzimo/VTT/VTT
+PyTorch version 2.3.0+cu118
+Device count 2
+/home/wangzimo/VTT/isaacgym/python/isaacgym/_bindings/src/gymtorch
+Using /home/wangzimo/.cache/torch_extensions/py38_cu118 as PyTorch extensions root...
+Emitting ninja build file /home/wangzimo/.cache/torch_extensions/py38_cu118/gymtorch/build.ninja...
+Building extension module gymtorch...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+ninja: no work to do.
+Not connected to PVD
++++ Using GPU PhysX
+Physics Engine: PhysX
+Physics Device: cuda:0
+GPU Pipeline: enabled

@@ -25,7 +25,7 @@ from aerial_gym.models import TrackAgileModuleVer0, TrackGroundModelVer6
 from aerial_gym.envs import IsaacGymDynamics, NewtonDynamics
 # os.path.basename(__file__).rstrip(".py")
 from pytorch3d.transforms import euler_angles_to_matrix
-
+from aerial_gym.utils.mymath import set_circle_point
 """
 Test program for train_trackagileVer3.py
 """
@@ -47,9 +47,9 @@ def get_args():
             "help": "batch size of training. Notice that batch_size should be equal to num_envs"},
         {"name": "--num_worker", "type":int, "default": 4,
             "help": "num worker of dataloader"},
-        {"name": "--num_epoch", "type":int, "default": 1520,
+        {"name": "--num_epoch", "type":int, "default": 36,
             "help": "num of epoch"},
-        {"name": "--len_sample", "type":int, "default": 1550,
+        {"name": "--len_sample", "type":int, "default": 1,
             "help": "length of a sample"},
         {"name": "--tmp", "type": bool, "default": False, "help": "Set false to officially save the trainning log"},
         {"name": "--gamma", "type":int, "default": 0.8,
@@ -145,6 +145,14 @@ if __name__ == "__main__":
             timer = torch.zeros((args.batch_size,), device=device)
             reset_buf = None
             now_quad_state = envs.reset(reset_buf=reset_buf).detach()
+            now_quad_state = torch.zeros((args.batch_size, 13)).to(device)
+            now_quad_state[:, :2] = set_circle_point(args.batch_size, 5, device, epoch * 10)
+            now_quad_state[:, 2] = 7
+            now_quad_state[:, 7:10] = 0
+            now_quad_state[:, 10:13] = 0
+            now_quad_state[:, 3:7] = 0
+            now_quad_state[:, 6] = 1
+            envs.set_reset_to(now_quad_state)
             if torch.isnan(now_quad_state[:, 3:6]).any():
                 # print(input_buffer[max(step+1-args.slide_size, 0):step+1])
                 print("Nan detected in early input!!!")
@@ -161,6 +169,7 @@ if __name__ == "__main__":
 
                 # rel_dis = envs.get_relative_distance()
                 # tar_state = envs.get_tar_state().detach()
+                now_quad_state = envs.get_quad_state()
                 rel_dis = tar_state[:, :3] - now_quad_state[:, :3]
                 
                 # real_rel_dis = envs.get_future_relative_distance()
@@ -232,42 +241,42 @@ if __name__ == "__main__":
                 speed = torch.norm(now_quad_state[0, 6:9], dim=0, p=2)
                 if reset_buf[0]:
                     loss[0] = float('nan')
-                writer.add_scalar(f'Total Loss', loss[0], step)
-                writer.add_scalar(f'Direction Loss', old_loss.direction[0], step)
-                writer.add_scalar(f'Distance Loss', old_loss.distance[0], step)
-                writer.add_scalar(f'Velocity Loss', old_loss.vel[0], step)
-                writer.add_scalar(f'Orientation Loss', old_loss.ori[0], step)
-                writer.add_scalar(f'Height Loss', old_loss.h[0], step)
+                # writer.add_scalar(f'Total Loss', loss[0], step)
+                # writer.add_scalar(f'Direction Loss', old_loss.direction[0], step)
+                # writer.add_scalar(f'Distance Loss', old_loss.distance[0], step)
+                # writer.add_scalar(f'Velocity Loss', old_loss.vel[0], step)
+                # writer.add_scalar(f'Orientation Loss', old_loss.ori[0], step)
+                # writer.add_scalar(f'Height Loss', old_loss.h[0], step)
 
-                writer.add_scalar(f'Orientation/X', direction_vector[0, 0], step)
-                writer.add_scalar(f'Orientation/Y', direction_vector[0, 1], step)
-                writer.add_scalar(f'Orientation/Z', direction_vector[0, 2], step)
-                writer.add_scalar(f'Orientation/Theta', theta_degrees[0], step)
-                writer.add_scalar(f'Acceleration/X', acceleration[0, 0], step)
-                writer.add_scalar(f'Acceleration/Y', acceleration[0, 1], step)
-                writer.add_scalar(f'Acceleration/Z', acceleration[0, 2], step)
-                writer.add_scalar(f'Horizon Distance', horizon_dis, step)
-                writer.add_scalar(f'Target Position/X', tar_pos[0, 0], step)
-                writer.add_scalar(f'Target Position/Y', tar_pos[0, 1], step)
-                writer.add_scalar(f'Position/X', now_quad_state[0, 0], step)
-                writer.add_scalar(f'Position/Y', now_quad_state[0, 1], step)
-                writer.add_scalar(f'Velocity/X', now_quad_state[0, 6], step)
-                writer.add_scalar(f'Velocity/Y', now_quad_state[0, 7], step)
-                writer.add_scalar(f'Distance/X', tar_pos[0, 0] - now_quad_state[0, 0], step)
-                writer.add_scalar(f'Distance/Y', tar_pos[0, 1] - now_quad_state[0, 1], step)
-                writer.add_scalar(f'Action/F', action[0, 0], step)
-                writer.add_scalar(f'Action/X', action[0, 1], step)
-                writer.add_scalar(f'Action/Y', action[0, 2], step)
-                writer.add_scalar(f'Action/Z', action[0, 3], step)
-                writer.add_scalar(f'Speed/Z', now_quad_state[0, 8], step)
-                writer.add_scalar(f'Speed', speed, step)
-                writer.add_scalar(f'Height', now_quad_state[0, 2], step)
+                writer.add_scalar(f'Orientation/X', direction_vector[0, 0], epoch * 10)
+                writer.add_scalar(f'Orientation/Y', direction_vector[0, 1], epoch * 10)
+                writer.add_scalar(f'Orientation/Z', direction_vector[0, 2], epoch * 10)
+                writer.add_scalar(f'Orientation/Theta', theta_degrees[0], epoch * 10)
+                writer.add_scalar(f'Acceleration/X', acceleration[0, 0], epoch * 10)
+                writer.add_scalar(f'Acceleration/Y', acceleration[0, 1], epoch * 10)
+                writer.add_scalar(f'Acceleration/Z', acceleration[0, 2], epoch * 10)
+                writer.add_scalar(f'Horizon Distance', horizon_dis, epoch * 10)
+                writer.add_scalar(f'Target Position/X', tar_pos[0, 0], epoch * 10)
+                writer.add_scalar(f'Target Position/Y', tar_pos[0, 1], epoch * 10)
+                writer.add_scalar(f'Position/X', now_quad_state[0, 0], epoch * 10)
+                writer.add_scalar(f'Position/Y', now_quad_state[0, 1], epoch * 10)
+                writer.add_scalar(f'Velocity/X', now_quad_state[0, 6], epoch * 10)
+                writer.add_scalar(f'Velocity/Y', now_quad_state[0, 7], epoch * 10)
+                writer.add_scalar(f'Distance/X', tar_pos[0, 0] - now_quad_state[0, 0], epoch * 10)
+                writer.add_scalar(f'Distance/Y', tar_pos[0, 1] - now_quad_state[0, 1], epoch * 10)
+                writer.add_scalar(f'Action/F', action[0, 0], epoch * 10)
+                writer.add_scalar(f'Action/X', action[0, 1], epoch * 10)
+                writer.add_scalar(f'Action/Y', action[0, 2], epoch * 10)
+                writer.add_scalar(f'Action/Z', action[0, 3], epoch * 10)
+                writer.add_scalar(f'Speed/Z', now_quad_state[0, 8], epoch * 10)
+                writer.add_scalar(f'Speed', speed, epoch * 10)
+                writer.add_scalar(f'Height', now_quad_state[0, 2], epoch * 10)
 
                 old_loss.reset(reset_idx=reset_idx)
                 timer = timer + 1
                 timer[reset_idx] = 0
             print(f"Epoch {epoch}, Ave loss = {ave_loss}, num reset = {num_reset}")
-            break
+            # break
             
     
     writer.close()

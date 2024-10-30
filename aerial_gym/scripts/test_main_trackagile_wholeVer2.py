@@ -20,7 +20,7 @@ import sys
 sys.path.append('/home/wangzimo/VTT/VTT')
 # print(sys.path)
 from aerial_gym.envs import *
-from aerial_gym.utils import task_registry, velh_lossVer5, agile_lossVer1, AgileLoss, agile_lossVer3
+from aerial_gym.utils import task_registry, velh_lossVer5, agile_lossVer1, AgileLoss, agile_lossVer4
 from aerial_gym.models import TrackAgileModuleVer0, TrackGroundModelVer6
 from aerial_gym.envs import IsaacGymDynamics, NewtonDynamics
 # os.path.basename(__file__).rstrip(".py")
@@ -41,7 +41,7 @@ def get_args():
         {"name": "--seed", "type": int, "default": 142, "help": "Random seed. Overrides config file if provided."},
 
         # train setting
-        {"name": "--learning_rate", "type":float, "default": 1.6e-6,
+        {"name": "--learning_rate", "type":float, "default": 1.6e-7,
             "help": "the learning rate of the optimizer"},
         {"name": "--batch_size", "type":int, "default": 1024,
             "help": "batch size of training. Notice that batch_size should be equal to num_envs"},
@@ -122,7 +122,7 @@ if __name__ == "__main__":
 
     dynamic = IsaacGymDynamics()
     
-    model = TrackAgileModuleVer0(device=device).to(device)
+    model = TrackAgileModuleVer1(device=device).to(device)
     # model = TrackGroundModelVer6(device=device).to(device)
     checkpoint = torch.load(args.param_load_path, map_location=device)
     model.load_state_dict(checkpoint)
@@ -186,7 +186,7 @@ if __name__ == "__main__":
                 # print("Label:0.25")
                 new_state_sim, tar_state = envs.step(new_state_dyn.detach())
                 # tmp = envs.get_camera_output()
-                x = envs.save_camera_output(file_name=f'{step}.png', idx=0)
+                # x = envs.save_camera_output(file_name=f'{step}.png', idx=0)
                 # print("Label:0.5")
                 tar_pos = tar_state[:, :3].detach()
                 
@@ -204,7 +204,7 @@ if __name__ == "__main__":
                 # loss, loss_direction, loss_speed, loss_h, loss_ori = space_lossVer4(now_quad_state, tar_state, tar_pos, 7, tar_ori)
                 # loss, loss_direction, loss_speed, loss_ori, loss_h = velh_lossVer5(now_quad_state, tar_pos, 7, tar_ori)
                 # loss, loss_direction, loss_distance, loss_velocity, loss_ori, loss_h = agile_lossVer1(now_quad_state, tar_state, 7, tar_ori, 1, step, envs.cfg.sim.dt, init_vec)
-                loss, new_loss = agile_lossVer3(old_loss, now_quad_state, tar_state, 7, tar_ori, 1, timer, envs.cfg.sim.dt, init_vec)
+                loss, new_loss = agile_lossVer4(old_loss, now_quad_state, tar_state, 7, tar_ori, 1, timer, envs.cfg.sim.dt, init_vec)
                 old_loss = new_loss
                 # print("Label:2")
                 
@@ -229,14 +229,16 @@ if __name__ == "__main__":
                 theta = torch.acos(cos_sim)
                 theta_degrees = theta * 180.0 / torch.pi
                 
-                item_tested = 3
+                item_tested = 0
                 horizon_dis = torch.norm(now_quad_state[item_tested, :2] - tar_pos[item_tested, :2], dim=0, p=4)
                 speed = torch.norm(now_quad_state[item_tested, 6:9], dim=0, p=2)
 
                 if reset_buf[item_tested]:
                     loss[item_tested] = float('nan')
                 writer.add_scalar(f'Total Loss', loss[item_tested], step)
-                writer.add_scalar(f'Direction Loss', old_loss.direction[item_tested], step)
+                writer.add_scalar(f'Direction Loss/sum', old_loss.direction[item_tested], step)
+                writer.add_scalar(f'Direction Loss/xy', old_loss.direction_hor[item_tested], step)
+                writer.add_scalar(f'Direction Loss/z', old_loss.direction_ver[item_tested], step)
                 writer.add_scalar(f'Distance Loss', old_loss.distance[item_tested], step)
                 writer.add_scalar(f'Velocity Loss', old_loss.vel[item_tested], step)
                 writer.add_scalar(f'Orientation Loss', old_loss.ori[item_tested], step)

@@ -189,7 +189,7 @@ class TrackAgileVer1(BaseTask):
             # create env instance
             env_handle = self.gym.create_env(
                 self.sim, env_lower, env_upper, int(np.sqrt(self.num_envs)))
-            
+            # print("??????: 1")
             pos = torch.tensor([0, 0, 3], device=self.device)
             start_pose.p = gymapi.Vec3(*pos)
             actor_handle = self.gym.create_actor(
@@ -197,7 +197,7 @@ class TrackAgileVer1(BaseTask):
             self.robot_actor_index = self.gym.get_actor_index(env_handle, actor_handle, gymapi.IndexDomain.DOMAIN_ENV)
             self.robot_body_index = self.gym.get_actor_rigid_body_index(env_handle, actor_handle, 0, gymapi.IndexDomain.DOMAIN_ENV)
             self.robot_body_handle = self.gym.get_actor_rigid_body_handle(env_handle, actor_handle, 0)
-            
+            # print("??????: 2")
             # Create Cemara
             camera_properties = gymapi.CameraProperties()
             camera_properties.width = 224
@@ -205,13 +205,13 @@ class TrackAgileVer1(BaseTask):
             camera_properties.enable_tensors = True
             
             camera_handle = self.gym.create_camera_sensor(env_handle, camera_properties)
-            
+            # print("??????: 2.5")
             camera_offset = gymapi.Vec3(0.5, 0, 0.05)
             camera_rotation = gymapi.Quat.from_axis_angle(gymapi.Vec3(0, 1, 0), np.deg2rad(0))
-            
+            # print("??????: 2.6")
             self.gym.attach_camera_to_body(camera_handle, env_handle, self.robot_body_handle, gymapi.Transform(camera_offset, camera_rotation), gymapi.FOLLOW_TRANSFORM)
             self.camera_handles.append(camera_handle)
-            
+            # print("??????: 3")
             camera_tensor = self.gym.get_camera_image_gpu_tensor(self.sim, env_handle, camera_handle, gymapi.IMAGE_COLOR)
             torch_camera_tensor = gymtorch.wrap_tensor(camera_tensor)
             self.camera_root_tensors.append(torch_camera_tensor)
@@ -221,7 +221,7 @@ class TrackAgileVer1(BaseTask):
             self.camera_dep_root_tensors.append(torch_camera_dep_tensor)
 
             
-            
+            # print("??????: 4")
             pos = torch.tensor([0, 0, 0.2], device=self.device)
             start_pose.p = gymapi.Vec3(*pos)
             tar_actor_handle = self.gym.create_actor(
@@ -230,7 +230,7 @@ class TrackAgileVer1(BaseTask):
             self.tar_actor_index = self.gym.get_actor_index(env_handle, tar_actor_handle, gymapi.IndexDomain.DOMAIN_ENV)
             self.tar_body_index = self.gym.get_actor_rigid_body_index(env_handle, tar_actor_handle, 0, gymapi.IndexDomain.DOMAIN_ENV)
 
-
+            # print("??????: 5")
             tar_seg_id_count += 1
             self.gym.set_rigid_body_segmentation_id(env_handle, tar_actor_handle, 0, tar_seg_id_count)
             self.tar_seg_ids.append(tar_seg_id_count)
@@ -239,7 +239,7 @@ class TrackAgileVer1(BaseTask):
             self.envs.append(env_handle)
             self.actor_handles.append(actor_handle)
             self.actor_handles.append(tar_actor_handle)
-        
+            # print("??????: 6")
 
         self.robot_mass = 0
         for prop in self.robot_body_props:
