@@ -186,7 +186,7 @@ if __name__ == "__main__":
                 # print("Label:0.25")
                 new_state_sim, tar_state = envs.step(new_state_dyn.detach())
                 # tmp = envs.get_camera_output()
-                # x = envs.save_camera_output(file_name=f'{step}.png', idx=0)
+                x = envs.save_camera_output(file_name=f'{step}.png', idx=0)
                 # print("Label:0.5")
                 tar_pos = tar_state[:, :3].detach()
                 
@@ -228,6 +228,10 @@ if __name__ == "__main__":
                 cos_sim = F.cosine_similarity(direction_vector, rel_dis, dim=1)
                 theta = torch.acos(cos_sim)
                 theta_degrees = theta * 180.0 / torch.pi
+
+                cos_sim_hor = F.cosine_similarity(direction_vector[:, :2], rel_dis[:, :2], dim=1)
+                theta_hor = torch.acos(cos_sim_hor)
+                theta_degrees_hor = theta_hor * 180.0 / torch.pi
                 
                 item_tested = 1
                 horizon_dis = torch.norm(now_quad_state[item_tested, :2] - tar_pos[item_tested, :2], dim=0, p=4)
@@ -248,6 +252,7 @@ if __name__ == "__main__":
                 writer.add_scalar(f'Orientation/Y', direction_vector[item_tested, 1], step)
                 writer.add_scalar(f'Orientation/Z', direction_vector[item_tested, 2], step)
                 writer.add_scalar(f'Orientation/Theta', theta_degrees[item_tested], step)
+                writer.add_scalar(f'Orientation/ThetaXY', theta_degrees_hor[item_tested], step)
                 writer.add_scalar(f'Acceleration/X', acceleration[item_tested, 0], step)
                 writer.add_scalar(f'Acceleration/Y', acceleration[item_tested, 1], step)
                 writer.add_scalar(f'Acceleration/Z', acceleration[item_tested, 2], step)

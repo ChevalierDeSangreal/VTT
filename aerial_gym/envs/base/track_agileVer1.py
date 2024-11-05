@@ -206,7 +206,7 @@ class TrackAgileVer1(BaseTask):
             
             camera_handle = self.gym.create_camera_sensor(env_handle, camera_properties)
             # print("??????: 2.5")
-            camera_offset = gymapi.Vec3(0.5, 0, 0.05)
+            camera_offset = gymapi.Vec3(0.21, 0, 0.05)
             camera_rotation = gymapi.Quat.from_axis_angle(gymapi.Vec3(0, 1, 0), np.deg2rad(0))
             # print("??????: 2.6")
             self.gym.attach_camera_to_body(camera_handle, env_handle, self.robot_body_handle, gymapi.Transform(camera_offset, camera_rotation), gymapi.FOLLOW_TRANSFORM)
@@ -611,16 +611,16 @@ class TrackAgileVer1(BaseTask):
         return quaternions
     
     def render(self, sync_frame_time=True):
-        # # print("##### 5.1")
-        # # Fetch results
-        # self.gym.fetch_results(self.sim, True) # use only when device is not "cpu"
-        # # Step graphics. Skipping this causes the onboard robot camera tensors to not be updated
-        # # print("##### 5.2")
-        # self.gym.step_graphics(self.sim)
-        # # print("##### 5.3")
-        # self.gym.render_all_camera_sensors(self.sim)
-        # # print("##### 5.4")
-        # # if viewer exists update it based on requirement
+        # print("##### 5.1")
+        # Fetch results
+        self.gym.fetch_results(self.sim, True) # use only when device is not "cpu"
+        # Step graphics. Skipping this causes the onboard robot camera tensors to not be updated
+        # print("##### 5.2")
+        self.gym.step_graphics(self.sim)
+        # print("##### 5.3")
+        self.gym.render_all_camera_sensors(self.sim)
+        # print("##### 5.4")
+        # if viewer exists update it based on requirement
         if self.viewer:
             # print("##### 5.5")
             # check for window closed

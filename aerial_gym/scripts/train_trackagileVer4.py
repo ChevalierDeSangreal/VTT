@@ -41,13 +41,13 @@ def get_args():
         {"name": "--seed", "type": int, "default": 42, "help": "Random seed. Overrides config file if provided."},
 
         # train setting
-        {"name": "--learning_rate", "type":float, "default": 1.6e-5,
+        {"name": "--learning_rate", "type":float, "default": 1.6e-7,
             "help": "the learning rate of the optimizer"},
         {"name": "--batch_size", "type":int, "default": 1024,
             "help": "batch size of training. Notice that batch_size should be equal to num_envs"},
         {"name": "--num_worker", "type":int, "default": 4,
             "help": "num worker of dataloader"},
-        {"name": "--num_epoch", "type":int, "default": 2520,
+        {"name": "--num_epoch", "type":int, "default": 12520,
             "help": "num of epoch"},
         {"name": "--len_sample", "type":int, "default": 650,
             "help": "length of a sample"},
