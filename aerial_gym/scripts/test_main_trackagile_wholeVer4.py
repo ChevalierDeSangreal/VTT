@@ -186,7 +186,7 @@ if __name__ == "__main__":
                 # print("Label:0.25")
                 new_state_sim, tar_state = envs.step(new_state_dyn.detach())
                 # tmp = envs.get_camera_output()
-                x = envs.save_camera_output(file_name=f'{step}.png', idx=0)
+                x = envs.save_camera_output(file_name=f'{step}.png', idx=3)
                 # print("Label:0.5")
                 tar_pos = tar_state[:, :3].detach()
                 

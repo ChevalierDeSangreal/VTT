@@ -41,7 +41,7 @@ def get_args():
         {"name": "--seed", "type": int, "default": 42, "help": "Random seed. Overrides config file if provided."},
 
         # train setting
-        {"name": "--learning_rate", "type":float, "default": 1.6e-7,
+        {"name": "--learning_rate", "type":float, "default": 1.6e-4,
             "help": "the learning rate of the optimizer"},
         {"name": "--batch_size", "type":int, "default": 1024,
             "help": "batch size of training. Notice that batch_size should be equal to num_envs"},
@@ -126,8 +126,8 @@ if __name__ == "__main__":
 
     model = TrackAgileModuleVer1(device=device).to(device)
     # model = TrackGroundModelVer6(device=device).to(device)
-    checkpoint = torch.load(args.param_load_path, map_location=device)
-    model.load_state_dict(checkpoint)
+    # checkpoint = torch.load(args.param_load_path, map_location=device)
+    # model.load_state_dict(checkpoint)
 
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, eps=1e-5)
     criterion = nn.MSELoss(reduction='none')
