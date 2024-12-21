@@ -41,7 +41,7 @@ def get_args():
         {"name": "--seed", "type": int, "default": 42, "help": "Random seed. Overrides config file if provided."},
 
         # train setting
-        {"name": "--learning_rate", "type":float, "default": 1.6e-7,
+        {"name": "--learning_rate", "type":float, "default": 1.6e-6,
             "help": "the learning rate of the optimizer"},
         {"name": "--batch_size", "type":int, "default": 8,
             "help": "batch size of training. Notice that batch_size should be equal to num_envs"},
@@ -125,10 +125,11 @@ if __name__ == "__main__":
     dynamic = IsaacGymDynamics()
 
     model = TrackAgileModuleVer3(device=device).to(device)
+    # model.extractor_module.load_state_dict(torch.load('/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer7.pth', map_location=device))
 
-    # model.load_model(args.param_load_path)
+    model.load_model(args.param_load_path)
 
-    optimizer = optim.Adam(model.extractor_module.parameters(), lr=args.learning_rate, eps=1e-5)
+    optimizer = optim.Adam(list(model.extractor_module.parameters()) + list(model.directpred.parameters()), lr=args.learning_rate, eps=1e-5)
     criterion = nn.MSELoss(reduction='none')
     # scheduler = lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)
 
@@ -146,65 +147,66 @@ if __name__ == "__main__":
         optimizer.zero_grad()
 
 
-
-        reset_buf = None
-        now_quad_state = envs.reset(reset_buf=reset_buf).detach()
-        
-        if torch.isnan(now_quad_state[:, 3:6]).any():
-            # print(input_buffer[max(step+1-args.slide_size, 0):step+1])
-            print("Nan detected in early input!!!")
-            exit(0)
-        reset_buf = torch.zeros((args.batch_size,))
-        
-        num_reset = 0
-        tar_state = envs.get_tar_state().detach()
         # train
         for step in range(args.len_sample):
+            now_quad_state = envs.reset(reset_buf=None).detach()
+
             dep_image, seg_image = envs.get_camera_dep_seg_output()
+            # $$$ Why is the dep_image negative??
+            dep_image = torch.abs(dep_image)
             mask = seg_image.bool()
             image_input = torch.where(mask, dep_image, torch.full_like(dep_image, 1e2))
 
+            # # x = envs.save_camera_output(file_name="", file_path="/home/wangzimo/VTT/VTT/aerial_gym/scripts/camera_output/test_input.png", idx=0)
+            # # exit(0)
+            # file_path = "/home/wangzimo/VTT/VTT/aerial_gym/scripts/camera_output/test_input.png"
+            # image_to_visualize = image_input[2].cpu().numpy()
+            # # np.savetxt("/home/wangzimo/VTT/VTT/aerial_gym/scripts/camera_output/image_input.txt", image_to_visualize, delimiter=',', fmt='%.6f')
+            # values_less_than_100 = image_to_visualize[image_to_visualize < 90]
+            # # dep_image_less_than_100 = dep_image[2][dep_image[2] < 0]
+            # print(values_less_than_100)
+            # # print(dep_image_less_than_100)
+            # # print(image_input[0])
+            # plt.figure(figsize=(6, 6))
+            # # plt.imshow(dep_image[2].cpu().numpy(), cmap='viridis')
+            # plt.imshow(image_to_visualize, cmap='viridis')  # 可以根据需要更改 colormap
+            # plt.colorbar()  # 添加颜色条以显示值范围
+            # plt.title(f"Visualizing Image Input: Batch {0}")
+            # plt.xlabel("X-axis")
+            # plt.ylabel("Y-axis")
+            # plt.savefig(file_path)
+            # plt.close()
+            # exit(0)
+            # # print(mask[0])
+            # # print(dep_image[0])
+            # # print(image_input[0])
 
             image_input = image_input.detach()
             if torch.isnan(image_input).any():
                 print("Nan detected in image_input!!!")
                 exit(0)
-            image_feature = model.extractor_module(image_input)
+            image_feature = model.extractor_module(image_input, mask)
 
             
             tmp_input = torch.cat((now_quad_state[:, 3:], image_feature), dim=1)
             pred_dis = model.directpred(tmp_input)
 
             # print("Label:0.25")
-            new_state_sim, tar_state = envs.step()
+            # new_state_sim, tar_state = envs.step()
             # print("Label:0.5")
+            tar_state = envs.get_tar_state().detach()
             tar_pos = tar_state[:, :3].detach()
             
-            now_quad_state = new_state_sim
-
-            # print("Label:1")
-            reset_buf, reset_idx = envs.check_reset_out()
-            # if len(reset_idx):
-            #     print(f"On step {step}, reset {reset_idx}")
-            not_reset_buf = torch.logical_not(reset_buf)
-            num_reset += len(reset_idx)
+            now_quad_state = envs.get_quad_state().detach()
 
                 
             loss = agile_loss_imageVer0(now_quad_state, tar_state, pred_dis)
-            # print("Label:2")
-            
-            # loss.backward(reset_buf, retain_graph=True)
-            now_quad_state[reset_idx] = envs.reset(reset_buf=reset_buf)[reset_idx].detach()
-            # print("Length of reset buf:", len(reset_idx), not_reset_buf)
-
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
-            now_quad_state = now_quad_state.detach()
 
 
-
-        ave_loss = torch.sum(loss) / args.batch_size
+        ave_loss = torch.sum(loss)
         
         writer.add_scalar('Loss', ave_loss.item(), epoch)
             
@@ -214,8 +216,8 @@ if __name__ == "__main__":
         
         if (epoch + 1) % 50 == 0:
             print("Saving Model...")
-            # model.save_model(args.param_save_path)
-            torch.save(model.extractor_module.state_dict(), args.param_save_path)
+            model.save_model(args.param_save_path)
+            # torch.save(model.extractor_module.state_dict(), args.param_save_path)
     
         # envs.update_target_traj()
     writer.close()

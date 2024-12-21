@@ -4,6 +4,7 @@ import torch
 import torchvision.models as models
 import torchvision.transforms as transforms
 from .resnet import Resnet
+import matplotlib.pyplot as plt
 
 class TrackAgileModuleVer0(nn.Module):
     """
@@ -91,9 +92,26 @@ class TrackAgileModuleVer2ExtractorVer2(nn.Module):
                     nn.init.zeros_(layer.bias)  # Initialize biases to zero (optional)
         self.device = device
 
-    def forward(self, x):
-        
+    def forward(self, x, mask):
+        x = torch.where(mask, x, torch.full_like(x, 333))
         x = -self.maxpooling(-x)
+        x[x == 333] = 0
+        # file_path = "/home/wangzimo/VTT/VTT/aerial_gym/scripts/camera_output/test_input.png"
+        # image_to_visualize = x[0].cpu().numpy()
+        # # print(x[0])
+        # plt.figure(figsize=(6, 6))
+        # plt.imshow(image_to_visualize, cmap='viridis', vmin=0, vmax=10)  # 可以根据需要更改 colormap
+        # plt.colorbar()  # 添加颜色条以显示值范围
+        # plt.title(f"Visualizing Image Input: Batch {0}")
+        # plt.xlabel("X-axis")
+        # plt.ylabel("Y-axis")
+        # plt.savefig(file_path)
+        # plt.close()
+        # exit(0)
+        # # print(mask[0])
+        # # print(dep_image[0])
+        # # print(image_input[0])
+
         # print(x.shape)
         x = x.view(x.size(0), -1)
         out = self.fc(x)

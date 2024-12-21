@@ -58,6 +58,8 @@ class Loss:
 def agile_loss_imageVer0(quad_state, tar_state, pred_dis):
     tar_pos = tar_state[:, :3]
     dis = (tar_pos[:, :3].clone() - quad_state[:, :3].clone())
+    # print("Predicted Distance:", pred_dis[0], "Real Distance", dis[0])
+    # exit(0)
     mse_loss = nn.MSELoss()
     loss = mse_loss(pred_dis, dis)
     return loss

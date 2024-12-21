@@ -63,7 +63,7 @@ def get_args():
         # model setting
         {"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer6.pth',
             "help": "The path to model parameters"},
-        {"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer6.pth',
+        {"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer7.pth',
             "help": "The path to model parameters"},
         
         ]
@@ -127,7 +127,8 @@ if __name__ == "__main__":
 
     model = TrackAgileModuleVer3(device=device).to(device)
 
-    # model.load_model(args.param_load_path)
+    model.load_model(args.param_load_path)
+    # model.extractor_module.load_state_dict(torch.load('/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer7.pth', map_location=device))
 
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, eps=1e-5)
     criterion = nn.MSELoss(reduction='none')

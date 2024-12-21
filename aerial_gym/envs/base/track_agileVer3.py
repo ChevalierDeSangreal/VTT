@@ -347,6 +347,8 @@ class TrackAgileVer3(BaseTask):
             # print("##### 13")
             self.gym.set_actor_root_state_tensor(self.sim, self.root_tensor)
             # print("##### 14")
+        self.gym.simulate(self.sim)
+        self.render(sync_frame_time=False)
         return self.get_quad_state()
 
     def set_reset_idx(self, env_ids):
@@ -360,12 +362,14 @@ class TrackAgileVer3(BaseTask):
             # self.tar_root_states[idx, 0:3] = self.tar_traj[idx, self.count_step[idx], :3]
         # print(self.tar_traj.shape)
         # print(self.tar_traj.shape)
-        pos_offset = rand_circle_point(num_resets, 1.5, self.device)
-        self.tar_root_states[env_ids, 0] = 3
-        self.tar_root_states[env_ids, 1] = 0
-        self.tar_root_states[env_ids, :2] += pos_offset
+        # pos_offset = rand_circle_point(num_resets, 1, self.device)
+        self.tar_root_states[env_ids, 0] = torch.rand(num_resets, device=self.device) * 6 + 1
+        random_tensor = torch.randint(0, 2, (num_resets,), device=self.device) * 2 - 1
+        self.tar_root_states[env_ids, 1] = self.tar_root_states[env_ids, 0] * 0.2588 * random_tensor # max theta = 15 degree
+        # self.tar_root_states[env_ids, :2] += pos_offset
         # self.tar_root_states[env_ids, 0:3] = 0
-        self.tar_root_states[env_ids, 2] = 7
+        random_tensor = torch.randint(0, 2, (num_resets,), device=self.device) * 2 - 1
+        self.tar_root_states[env_ids, 2] = 7 + self.tar_root_states[env_ids, 0] * 0.2588 * 0.5 * random_tensor
 
         # reset linevels
         self.tar_root_states[env_ids, 7:10] = 0
@@ -377,7 +381,7 @@ class TrackAgileVer3(BaseTask):
         self.tar_root_states[env_ids, 6] = 1.0
 
         
-        self.tar_acc[env_ids] = rand_circle_point(num_resets, self.tar_acc_norm, self.device)
+        # self.tar_acc[env_ids] = rand_circle_point(num_resets, self.tar_acc_norm, self.device)
         # reset position
         # print(self.count_step.size(), self.tar_traj.size(),env_ids)
         # self.root_states[env_ids, 0:3] = self.tar_traj[env_ids, self.count_step[env_ids], :3]
