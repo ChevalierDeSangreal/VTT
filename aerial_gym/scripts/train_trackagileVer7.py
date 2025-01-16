@@ -159,8 +159,8 @@ if __name__ == "__main__":
 
             # # x = envs.save_camera_output(file_name="", file_path="/home/wangzimo/VTT/VTT/aerial_gym/scripts/camera_output/test_input.png", idx=0)
             # # exit(0)
-            # file_path = "/home/wangzimo/VTT/VTT/aerial_gym/scripts/camera_output/test_input.png"
-            # image_to_visualize = image_input[2].cpu().numpy()
+            # file_path = "/home/wangzimo/VTT/VTT/aerial_gym/scripts/camera_output/test_inputVer7.png"
+            # image_to_visualize = image_input[0].cpu().numpy()
             # # np.savetxt("/home/wangzimo/VTT/VTT/aerial_gym/scripts/camera_output/image_input.txt", image_to_visualize, delimiter=',', fmt='%.6f')
             # values_less_than_100 = image_to_visualize[image_to_visualize < 90]
             # # dep_image_less_than_100 = dep_image[2][dep_image[2] < 0]
@@ -187,10 +187,12 @@ if __name__ == "__main__":
                 exit(0)
             image_feature = model.extractor_module(image_input, mask)
 
-            
-            tmp_input = torch.cat((now_quad_state[:, 3:], image_feature), dim=1)
-            pred_dis = model.directpred(tmp_input)
+            # print(image_feature[0])
+            # exit(0)
 
+            pred_dis = model.directpred(image_feature)
+            # print(pred_dis[0])
+            # exit(0)
             # print("Label:0.25")
             # new_state_sim, tar_state = envs.step()
             # print("Label:0.5")
@@ -204,19 +206,18 @@ if __name__ == "__main__":
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
+            # break
 
-
-        ave_loss = torch.sum(loss)
         
-        writer.add_scalar('Loss', ave_loss.item(), epoch)
+        writer.add_scalar('Loss', loss.item(), epoch)
             
 
-        print(f"Epoch {epoch}, Ave loss = {ave_loss}")
+        print(f"Epoch {epoch}, loss = {loss}")
 
         
         if (epoch + 1) % 50 == 0:
             print("Saving Model...")
-            model.save_model(args.param_save_path)
+            # model.save_model(args.param_save_path)
             # torch.save(model.extractor_module.state_dict(), args.param_save_path)
     
         # envs.update_target_traj()

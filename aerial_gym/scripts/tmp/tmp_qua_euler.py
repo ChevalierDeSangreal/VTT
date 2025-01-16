@@ -4,14 +4,14 @@ from pytorch3d.transforms import quaternion_to_matrix, matrix_to_euler_angles, e
 # eul: x y z
 def qua2euler(qua):
     rotation_matrices = quaternion_to_matrix(
-        qua[:, [3, 0, 1, 2]])
+        qua)
     euler_angles = matrix_to_euler_angles(
-        rotation_matrices, "ZYX")[:, [2, 1, 0]]
+        rotation_matrices, "XYZ")#[:, [2, 1, 0]]
     return euler_angles
 
 def euler2qua(euler):
-    rotation_matrices = euler_angles_to_matrix(euler, "ZYX")
-    qua = matrix_to_quaternion(rotation_matrices)[:, [3, 2, 1, 0]]
+    rotation_matrices = euler_angles_to_matrix(euler, "XYZ")
+    qua = matrix_to_quaternion(rotation_matrices)
     return qua
 
 # euler_angles = torch.tensor([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]])  # Example Euler angles

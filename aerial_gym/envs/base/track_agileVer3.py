@@ -365,11 +365,28 @@ class TrackAgileVer3(BaseTask):
         # pos_offset = rand_circle_point(num_resets, 1, self.device)
         self.tar_root_states[env_ids, 0] = torch.rand(num_resets, device=self.device) * 6 + 1
         random_tensor = torch.randint(0, 2, (num_resets,), device=self.device) * 2 - 1
-        self.tar_root_states[env_ids, 1] = self.tar_root_states[env_ids, 0] * 0.2588 * random_tensor # max theta = 15 degree
+        self.tar_root_states[env_ids, 1] = torch.rand(num_resets, device=self.device) * self.tar_root_states[env_ids, 0] * 0.2588 * random_tensor # max theta = 15 degree
         # self.tar_root_states[env_ids, :2] += pos_offset
         # self.tar_root_states[env_ids, 0:3] = 0
         random_tensor = torch.randint(0, 2, (num_resets,), device=self.device) * 2 - 1
-        self.tar_root_states[env_ids, 2] = 7 + self.tar_root_states[env_ids, 0] * 0.2588 * 0.5 * random_tensor
+        self.tar_root_states[env_ids, 2] = 7 + torch.rand(num_resets, device=self.device) * self.tar_root_states[env_ids, 0] * 0.2588 * 0.5 * random_tensor
+
+
+        # # --------------------------------------
+        # self.tar_root_states[env_ids, 0] = 3
+        # self.tar_root_states[env_ids, 1] = 0
+        # # self.tar_root_states[env_ids, 0:3] = 0
+        # self.tar_root_states[env_ids, 2] = 7
+
+        # # reset linevels
+        # self.tar_root_states[env_ids, 7:10] = 0
+        # # self.tar_root_states[env_ids, 7:10] = self.tar_traj[env_ids, self.count_step[env_ids], 6:9]
+        # # reset angvels
+        # self.tar_root_states[env_ids, 10:13] = 0
+        # # reset quats
+        # self.tar_root_states[env_ids, 3:7] = 0
+        # self.tar_root_states[env_ids, 6] = 1.0
+        # # --------------------------------------
 
         # reset linevels
         self.tar_root_states[env_ids, 7:10] = 0

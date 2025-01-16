@@ -58,10 +58,11 @@ class Loss:
 def agile_loss_imageVer0(quad_state, tar_state, pred_dis):
     tar_pos = tar_state[:, :3]
     dis = (tar_pos[:, :3].clone() - quad_state[:, :3].clone())
-    # print("Predicted Distance:", pred_dis[0], "Real Distance", dis[0])
-    # exit(0)
+
     mse_loss = nn.MSELoss()
     loss = mse_loss(pred_dis, dis)
+    # print("Predicted Distance:", pred_dis[0], "Real Distance", dis[0], "loss", loss)
+    # exit(0)
     return loss
 
 def agile_lossVer5(loss:AgileLoss, quad_state, tar_state, tar_h, tar_ori, tar_dis, step, dt, init_vec, pred_dis):
@@ -128,7 +129,8 @@ def agile_lossVer5(loss:AgileLoss, quad_state, tar_state, tar_h, tar_ori, tar_di
     loss_aux = torch.norm(pred_dis - dis, dim=1, p=2)
     new_loss.aux = (loss.aux * step + loss_aux) / (step + 1)
 
-    loss_final = 1 * new_loss.ori + 100 * new_loss.distance + 1 * new_loss.vel + 50 * new_loss.direction + 100 * new_loss.h + 10 * loss_aux
+    loss_final = 1 * new_loss.ori + 100 * new_loss.distance + 1 * new_loss.vel + 50 * new_loss.direction + 100 * new_loss.h + 50 * loss_aux
+    # loss_final = 50 * loss_aux
     # loss_final = new_loss.distance + new_loss.h
 
     return loss_final, new_loss

@@ -63,7 +63,7 @@ def get_args():
         # model setting
         {"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer6.pth',
             "help": "The path to model parameters"},
-        {"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer6.pth',
+        {"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer6_steady.pth',
             "help": "The path to model parameters"},
         
         ]
@@ -129,6 +129,8 @@ if __name__ == "__main__":
     
     model.load_model(args.param_load_path)
 
+
+
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, eps=1e-5)
     criterion = nn.MSELoss(reduction='none')
     # scheduler = lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)
@@ -169,20 +171,30 @@ if __name__ == "__main__":
 
 
                 dep_image, seg_image = envs.get_camera_dep_seg_output()
+                dep_image = torch.abs(dep_image)
                 mask = seg_image.bool()
                 image_input = torch.where(mask, dep_image, torch.full_like(dep_image, 1e2))
 
-                # file_path = "/home/wangzimo/VTT/VTT/aerial_gym/scripts/camera_output/frames/"
-                # image_to_visualize = image_input[3].cpu().numpy()
+                # # x = envs.save_camera_output(file_name="", file_path="/home/wangzimo/VTT/VTT/aerial_gym/scripts/camera_output/test_input.png", idx=0)
+                # # exit(0)
+                # file_path = "/home/wangzimo/VTT/VTT/aerial_gym/scripts/camera_output/test_inputVer6.png"
+                # image_to_visualize = image_input[0].cpu().numpy()
+                # # np.savetxt("/home/wangzimo/VTT/VTT/aerial_gym/scripts/camera_output/image_input.txt", image_to_visualize, delimiter=',', fmt='%.6f')
+                # values_less_than_100 = image_to_visualize[image_to_visualize < 90]
+                # # dep_image_less_than_100 = dep_image[2][dep_image[2] < 0]
+                # print(values_less_than_100)
+                # # print(dep_image_less_than_100)
+                # # print(image_input[0])
                 # plt.figure(figsize=(6, 6))
+                # # plt.imshow(dep_image[2].cpu().numpy(), cmap='viridis')
                 # plt.imshow(image_to_visualize, cmap='viridis')  # 可以根据需要更改 colormap
                 # plt.colorbar()  # 添加颜色条以显示值范围
                 # plt.title(f"Visualizing Image Input: Batch {0}")
                 # plt.xlabel("X-axis")
                 # plt.ylabel("Y-axis")
-                # plt.savefig(file_path + f'{step}.png')
+                # plt.savefig(file_path)
                 # plt.close()
-                # # exit(0)
+                # exit(0)
                 # # print(mask[0])
                 # # print(dep_image[0])
                 # # print(image_input[0])
@@ -191,9 +203,14 @@ if __name__ == "__main__":
                 if torch.isnan(image_input).any():
                     print("Nan detected in image_input!!!")
                     exit(0)
-                image_feature = model.extractor_module(image_input)
+                image_feature = model.extractor_module(image_input, mask)
                 tmp_input = torch.cat((now_quad_state[:, 3:], image_feature), dim=1)
-                pred_dis = model.directpred(tmp_input)
+                # print(image_feature[0])
+                # exit(0)
+                tmp_input_directpred = image_feature
+                body_pred_dis = model.directpred(tmp_input_directpred)
+                # print(body_pred_dis[0])
+                # exit(0)
                 tmp_input = tmp_input.unsqueeze(0)
                 input_buffer = input_buffer[1:].clone()
                 input_buffer = torch.cat((input_buffer, tmp_input), dim=0)
@@ -224,8 +241,10 @@ if __name__ == "__main__":
                 num_reset += len(reset_idx)
                 input_buffer[:, reset_idx] = 0
 
-                    
-                loss, new_loss = agile_lossVer5(old_loss, now_quad_state, tar_state, 7, tar_ori, 3, timer, envs.cfg.sim.dt, init_vec, pred_dis)
+                world_to_body = dynamic.world_to_body_matrix(now_quad_state[:, 3:6].detach())
+                body_to_world = torch.transpose(world_to_body, 1, 2)
+                world_pred_dis = torch.matmul(body_to_world, torch.unsqueeze(body_pred_dis, 2)).squeeze(-1)
+                loss, new_loss = agile_lossVer5(old_loss, now_quad_state, tar_state, 7, tar_ori, 3, timer, envs.cfg.sim.dt, init_vec, world_pred_dis)
                 old_loss = new_loss
                 # print("Label:2")
                 
@@ -244,7 +263,7 @@ if __name__ == "__main__":
                 theta_hor = torch.acos(cos_sim_hor)
                 theta_degrees_hor = theta_hor * 180.0 / torch.pi
                 
-                item_tested = 3
+                item_tested = 0
                 horizon_dis = torch.norm(now_quad_state[item_tested, :2] - tar_pos[item_tested, :2], dim=0, p=4)
                 speed = torch.norm(now_quad_state[item_tested, 6:9], dim=0, p=2)
 
@@ -277,8 +296,8 @@ if __name__ == "__main__":
                 writer.add_scalar(f'Velocity/Y', now_quad_state[item_tested, 7], step)
                 writer.add_scalar(f'Distance/X', tar_pos[item_tested, 0] - now_quad_state[item_tested, 0], step)
                 writer.add_scalar(f'Distance/Y', tar_pos[item_tested, 1] - now_quad_state[item_tested, 1], step)
-                writer.add_scalar(f'Predicted Distance/X', pred_dis[item_tested, 0], step)
-                writer.add_scalar(f'Predicted Distance/Y', pred_dis[item_tested, 1], step)
+                writer.add_scalar(f'Predicted Distance/X', world_pred_dis[item_tested, 0], step)
+                writer.add_scalar(f'Predicted Distance/Y', world_pred_dis[item_tested, 1], step)
                 writer.add_scalar(f'Action/F', action[item_tested, 0], step)
                 writer.add_scalar(f'Action/X', action[item_tested, 1], step)
                 writer.add_scalar(f'Action/Y', action[item_tested, 2], step)

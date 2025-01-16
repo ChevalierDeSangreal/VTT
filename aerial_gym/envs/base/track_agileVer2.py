@@ -7,6 +7,7 @@
     Modified based on track_agileVer1.py
     Using image as input
     $$$ By now a still target is set
+    $$$ Two place to change from 12 to 13
 """
 import numpy as np
 import os
@@ -270,6 +271,8 @@ class TrackAgileVer2(BaseTask):
             # print("??????: 2.5")
             camera_offset = gymapi.Vec3(0.21, 0, 0.05)
             camera_rotation = gymapi.Quat.from_axis_angle(gymapi.Vec3(0, 1, 0), np.deg2rad(0))
+            # print(camera_rotation)
+            # exit(0)
             # print("??????: 2.6")
             self.gym.attach_camera_to_body(camera_handle, env_handle, self.robot_body_handle, gymapi.Transform(camera_offset, camera_rotation), gymapi.FOLLOW_TRANSFORM)
             # self.gym.set_camera_location(camera_handle, env_handle, gymapi.Vec3(0,0,12), gymapi.Vec3(0,0,0))
@@ -348,6 +351,8 @@ class TrackAgileVer2(BaseTask):
             # print("##### 13")
             self.gym.set_actor_root_state_tensor(self.sim, self.root_tensor)
             # print("##### 14")
+        self.gym.simulate(self.sim)
+        self.render(sync_frame_time=False)
         return self.get_quad_state()
 
     def set_reset_idx(self, env_ids):
@@ -418,42 +423,46 @@ class TrackAgileVer2(BaseTask):
         tmp_tar_state[:, 7:10] = tar_state[:, 6:9]
         tmp_tar_state[:, 10:13] = tar_state[:, 9:12]
 
-        # # $$$ This part is for moving target
-        # # inv_acc_idx = torch.nonzero((self.count_step + self.tar_acc_intervel) % (self.tar_acc_intervel * 2)).squeeze(-1)
-        # # change_acc_idx = torch.nonzero(self.count_step % (self.tar_acc_intervel * 2)).squeeze(-1)
-        # # self.tar_acc[inv_acc_idx] *= -1
-        # # self.tar_acc[change_acc_idx, :2] = rand_circle_point(len(change_acc_idx), self.tar_acc_norm, self.device)
-        # inv_acc_idx = torch.nonzero(((self.count_step + self.tar_acc_intervel / 2) % self.tar_acc_intervel) == 0).squeeze(-1)
+
+        # -----------------------
+        # $$$ This part is for moving target
+        # inv_acc_idx = torch.nonzero((self.count_step + self.tar_acc_intervel) % (self.tar_acc_intervel * 2)).squeeze(-1)
+        # change_acc_idx = torch.nonzero(self.count_step % (self.tar_acc_intervel * 2)).squeeze(-1)
         # self.tar_acc[inv_acc_idx] *= -1
-        # # set position
-        # # self.tar_root_states[range(self.num_envs), 0:3] = 0
-        # self.tar_root_states[:, 2] = 7
-        # # set linearvels
-        # # print(f"Before Velocity in x: {self.tar_root_states[0, 7]}, Acceleration in x: {self.tar_acc[0, 0]}")
-        # # print(self.tar_root_states.shape, self.tar_acc.shape)
-        # self.tar_root_states[:, 7:9] += self.tar_acc * self.cfg.sim.dt
-        # # print(f"After Velocity in x: {self.tar_root_states[0, 7]}, Acceleration in x: {self.tar_acc[0, 0]}")
-        # self.tar_root_states[:, 9] = 0
-        # # set angvels
-        # self.tar_root_states[:, 10:13] = 0
-        # # set quats
-        # self.tar_root_states[:, 3:7] = 0
-        # self.tar_root_states[:, 6] = 1
-
-        # $$$ This part if for still target
-        self.tar_root_states[:, 0] = 3
-        self.tar_root_states[:, 1] = 0
-        # self.tar_root_states[env_ids, 0:3] = 0
+        # self.tar_acc[change_acc_idx, :2] = rand_circle_point(len(change_acc_idx), self.tar_acc_norm, self.device)
+        inv_acc_idx = torch.nonzero(((self.count_step + self.tar_acc_intervel / 2) % self.tar_acc_intervel) == 0).squeeze(-1)
+        self.tar_acc[inv_acc_idx] *= -1
+        # set position
+        # self.tar_root_states[range(self.num_envs), 0:3] = 0
         self.tar_root_states[:, 2] = 7
-
-        # reset linevels
-        self.tar_root_states[:, 7:10] = 0
-        # self.tar_root_states[env_ids, 7:10] = self.tar_traj[env_ids, self.count_step[env_ids], 6:9]
-        # reset angvels
+        # set linearvels
+        # print(f"Before Velocity in x: {self.tar_root_states[0, 7]}, Acceleration in x: {self.tar_acc[0, 0]}")
+        # print(self.tar_root_states.shape, self.tar_acc.shape)
+        self.tar_root_states[:, 7:9] += self.tar_acc * self.cfg.sim.dt
+        # print(f"After Velocity in x: {self.tar_root_states[0, 7]}, Acceleration in x: {self.tar_acc[0, 0]}")
+        self.tar_root_states[:, 9] = 0
+        # set angvels
         self.tar_root_states[:, 10:13] = 0
-        # reset quats
+        # set quats
         self.tar_root_states[:, 3:7] = 0
-        self.tar_root_states[:, 6] = 1.0
+        self.tar_root_states[:, 6] = 1
+
+        # # $$$ This part if for still target
+        # self.tar_root_states[:, 0] = 3
+        # self.tar_root_states[:, 1] = 0
+        # # self.tar_root_states[env_ids, 0:3] = 0
+        # self.tar_root_states[:, 2] = 7
+
+        # # reset linevels
+        # self.tar_root_states[:, 7:10] = 0
+        # # self.tar_root_states[env_ids, 7:10] = self.tar_traj[env_ids, self.count_step[env_ids], 6:9]
+        # # reset angvels
+        # self.tar_root_states[:, 10:13] = 0
+        # # reset quats
+        # self.tar_root_states[:, 3:7] = 0
+        # self.tar_root_states[:, 6] = 1.0
+
+        # -----------------------
 
         self.root_states.copy_(tmp_tar_state)
         self.gym.set_actor_root_state_tensor(self.sim, self.root_tensor)
@@ -591,16 +600,16 @@ class TrackAgileVer2(BaseTask):
         
         
     def check_reset_out(self):
-
-        seg_image = self.get_camera_seg_output().to(device=self.device)
-        sum_seg_image = torch.sum(seg_image, dim=(1, 2))
-        # print(sum_dep_image)
-        # print(torch.tensor(1, device=self.device), torch.tensor(0, device=self.device))
-        out_sight = torch.where(sum_seg_image == 0, torch.tensor(1, device=self.device), torch.tensor(0, device=self.device)).squeeze(-1)
-        out_sight_idx = torch.nonzero(out_sight).squeeze(-1)
-        # if len(out_sight_idx):
-        #     print("out_sight:", out_sight_idx)
-        # print("##### 7")
+        # # $$$ First place
+        # seg_image = self.get_camera_seg_output().to(device=self.device)
+        # sum_seg_image = torch.sum(seg_image, dim=(1, 2))
+        # # print(sum_dep_image)
+        # # print(torch.tensor(1, device=self.device), torch.tensor(0, device=self.device))
+        # out_sight = torch.where(sum_seg_image == 0, torch.tensor(1, device=self.device), torch.tensor(0, device=self.device)).squeeze(-1)
+        # out_sight_idx = torch.nonzero(out_sight).squeeze(-1)
+        # # if len(out_sight_idx):
+        # #     print("out_sight:", out_sight_idx)
+        # # print("##### 7")
 
         ones = torch.ones_like(self.reset_buf)
         out_space = torch.zeros_like(self.reset_buf)
@@ -618,8 +627,9 @@ class TrackAgileVer2(BaseTask):
         # if len(out_time_idx):
         #     print("out_time:", out_time_idx)
         
-        reset_buf = torch.logical_or(out_space, torch.logical_or(out_sight, out_time))
-        # reset_buf = torch.logical_or(out_space, out_time)
+        # $$$ Another first place
+        # reset_buf = torch.logical_or(out_space, torch.logical_or(out_sight, out_time))
+        reset_buf = torch.logical_or(out_space, out_time)
         reset_idx = torch.nonzero(reset_buf).squeeze(-1)
         
         
@@ -693,6 +703,7 @@ class TrackAgileVer2(BaseTask):
         return quaternions
     
     def render(self, sync_frame_time=True):
+        # $$$ Second place
         # print("##### 5.1")
         # Fetch results
         self.gym.fetch_results(self.sim, True) # use only when device is not "cpu"

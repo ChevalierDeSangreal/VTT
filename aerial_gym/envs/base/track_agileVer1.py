@@ -655,16 +655,16 @@ class TrackAgileVer1(BaseTask):
         return quaternions
     
     def render(self, sync_frame_time=True):
-        # print("##### 5.1")
-        # Fetch results
-        self.gym.fetch_results(self.sim, True) # use only when device is not "cpu"
-        # Step graphics. Skipping this causes the onboard robot camera tensors to not be updated
-        # print("##### 5.2")
-        self.gym.step_graphics(self.sim)
-        # print("##### 5.3")
-        self.gym.render_all_camera_sensors(self.sim)
-        # print("##### 5.4")
-        # if viewer exists update it based on requirement
+        # # print("##### 5.1")
+        # # Fetch results
+        # self.gym.fetch_results(self.sim, True) # use only when device is not "cpu"
+        # # Step graphics. Skipping this causes the onboard robot camera tensors to not be updated
+        # # print("##### 5.2")
+        # self.gym.step_graphics(self.sim)
+        # # print("##### 5.3")
+        # self.gym.render_all_camera_sensors(self.sim)
+        # # print("##### 5.4")
+        # # if viewer exists update it based on requirement
         if self.viewer:
             # print("##### 5.5")
             # check for window closed

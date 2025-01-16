@@ -9,3 +9,5 @@ past_param_saved/
 scripts_saved/
 test_runs/
 */__pycache__/
+aerial_gym/scripts/camera_output
+param/

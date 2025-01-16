@@ -42,7 +42,7 @@ def get_args():
         {"name": "--seed", "type": int, "default": 42, "help": "Random seed. Overrides config file if provided."},
 
         # train setting
-        {"name": "--learning_rate", "type":float, "default": 5.6e-6,
+        {"name": "--learning_rate", "type":float, "default": 1.6e-6,
             "help": "the learning rate of the optimizer"},
         {"name": "--batch_size", "type":int, "default": 4,
             "help": "batch size of training. Notice that batch_size should be equal to num_envs"},
@@ -63,7 +63,7 @@ def get_args():
         # model setting
         {"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer6.pth',
             "help": "The path to model parameters"},
-        {"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer7.pth',
+        {"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer6_saved.pth',
             "help": "The path to model parameters"},
         
         ]
@@ -130,7 +130,13 @@ if __name__ == "__main__":
     model.load_model(args.param_load_path)
     # model.extractor_module.load_state_dict(torch.load('/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer7.pth', map_location=device))
 
-    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, eps=1e-5)
+    for name, param in model.named_parameters():
+        if ("extractor_module" in name) or ("directpred" in name):
+            param.requires_grad = False
+
+
+    # optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, eps=1e-5)
+    optimizer = optim.Adam(model.directpred.parameters(), lr=args.learning_rate, eps=1e-5)
     criterion = nn.MSELoss(reduction='none')
     # scheduler = lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)
 
@@ -179,6 +185,7 @@ if __name__ == "__main__":
             # if torch.isnan(seg_image).any():
             #     print("Nan detected in seg_image!!!")
             #     exit(0)
+            dep_image = torch.abs(dep_image)
             mask = seg_image.bool()
             # if torch.isnan(mask).any():
             #     print("Nan detected in mask!!!")
@@ -209,7 +216,7 @@ if __name__ == "__main__":
             if torch.isnan(image_input).any():
                 print("Nan detected in image_input!!!")
                 exit(0)
-            image_feature = model.extractor_module(image_input)
+            image_feature = model.extractor_module(image_input, mask)
 
             
             # image_feature = image_feature * 10000
@@ -219,7 +226,11 @@ if __name__ == "__main__":
 
             # action = model(now_quad_state[:, 3:], rel_dis, real_rel_dis)
             tmp_input = torch.cat((now_quad_state[:, 3:], image_feature), dim=1)
-            pred_dis = model.directpred(tmp_input)
+            tmp_input_directpred = image_feature
+            body_pred_dis = model.directpred(tmp_input_directpred)
+
+
+
             # tmp_input = torch.cat((now_quad_state[:, 3:], rel_dis_3), dim=1)
             # if step % 50 == 0:
             #     print(f"Input on step {step}: {tmp_input[0]}")
@@ -256,8 +267,10 @@ if __name__ == "__main__":
             num_reset += len(reset_idx)
             input_buffer[:, reset_idx] = 0
 
-                
-            loss, new_loss = agile_lossVer5(old_loss, now_quad_state, tar_state, 7, tar_ori, 3, timer, envs.cfg.sim.dt, init_vec, pred_dis)
+            world_to_body = dynamic.world_to_body_matrix(now_quad_state[:, 3:6].detach())
+            body_to_world = torch.transpose(world_to_body, 1, 2)
+            world_pred_dis = torch.matmul(body_to_world, torch.unsqueeze(body_pred_dis, 2)).squeeze(-1)
+            loss, new_loss = agile_lossVer5(old_loss, now_quad_state, tar_state, 7, tar_ori, 3, timer, envs.cfg.sim.dt, init_vec, world_pred_dis)
             old_loss = new_loss
             # print("Label:2")
             
