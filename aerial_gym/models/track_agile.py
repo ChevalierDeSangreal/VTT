@@ -275,3 +275,82 @@ class TrackAgileModuleVer6(nn.Module):
     def set_eval_mode(self):
         """Set the model to evaluation mode."""
         self.eval()
+
+class TrackAgileModuleVer3Dicision(nn.Module):
+    def __init__(self, input_size=9+9, hidden_size=256, output_size=4, num_layers=2, device='cpu'):
+        super(TrackAgileModuleVer3Dicision, self).__init__()
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.gru = nn.GRU(input_size, hidden_size, num_layers).to(device)
+        self.fc = nn.Linear(hidden_size, output_size).to(device)
+        torch.nn.init.kaiming_normal_(self.fc.weight)
+
+    def forward(self, x, h0):
+        if h0 is None:
+            h0 = torch.zeros(self.num_layers, x.shape[1], self.hidden_size).to(x[0].device)
+
+        # print(x.shape, h0.shape)
+        out, hn = self.gru(x, h0)
+        # print(out.shape)
+        out = self.fc(out[-1, :, :])
+        # print(out.shape)
+        out = torch.sigmoid(out) * 2 - 1
+        return out, hn
+    
+class TrackAgileModuleVer7(nn.Module):
+    """
+    Based on Ver6
+    New GRU structure
+    """
+    def __init__(self, device='cpu'):
+        super(TrackAgileModuleVer7, self).__init__()
+        self.device = device
+
+        # Initialize Decision module
+        self.decision_module = TrackAgileModuleVer3Dicision(input_size=9+3,device=device).to(device)
+
+        # Initialize Extractor module
+        self.extractor_module = TrackAgileModuleVer2ExtractorVer2(device=device).to(device)
+
+        self.directpred = DirectionPrediction(device=device).to(device)
+
+    def save_model(self, path):
+        """Save the model's state dictionary to the specified path."""
+        torch.save(self.state_dict(), path)
+
+    def load_model(self, path):
+        """Load the model's state dictionary from the specified path."""
+        self.load_state_dict(torch.load(path, map_location=self.device))
+
+    def set_eval_mode(self):
+        """Set the model to evaluation mode."""
+        self.eval()
+
+class TrackAgileModuleVer8(nn.Module):
+    """
+    Based on Ver6
+    Add f to output action
+    """
+    def __init__(self, device='cpu'):
+        super(TrackAgileModuleVer8, self).__init__()
+        self.device = device
+
+        # Initialize Decision module
+        self.decision_module = TrackAgileModuleVer2Dicision(input_size=3+3+1,device=device).to(device)
+
+        # Initialize Extractor module
+        self.extractor_module = TrackAgileModuleVer2ExtractorVer2(device=device).to(device)
+
+        self.directpred = DirectionPrediction(device=device).to(device)
+
+    def save_model(self, path):
+        """Save the model's state dictionary to the specified path."""
+        torch.save(self.state_dict(), path)
+
+    def load_model(self, path):
+        """Load the model's state dictionary from the specified path."""
+        self.load_state_dict(torch.load(path, map_location=self.device))
+
+    def set_eval_mode(self):
+        """Set the model to evaluation mode."""
+        self.eval()

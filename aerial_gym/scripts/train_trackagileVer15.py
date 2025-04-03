@@ -20,36 +20,34 @@ sys.path.append('/home/wangzimo/VTT/VTT')
 # print(sys.path)
 from aerial_gym.envs import *
 from aerial_gym.utils import task_registry, velh_lossVer5, agile_lossVer1, AgileLoss, agile_lossVer4
-from aerial_gym.models import TrackAgileModuleVer4, TrackAgileModuleVer5
+from aerial_gym.models import TrackAgileModuleVer7, TrackAgileModuleVer5
 from aerial_gym.envs import IsaacGymDynamics, NewtonDynamics, IsaacGymOriDynamics, NRIsaacGymDynamics
 # os.path.basename(__file__).rstrip(".py")
 
 
 """
-Based on trackagileVer9.py
-Use relative distance as input
-Do not use velocity
-Use acceleration in body coordinate
+Based on trackagileVer11.py
+Use new gru structure
 """
 
 
 def get_args():
 	custom_parameters = [
 		{"name": "--task", "type": str, "default": "track_agileVer2", "help": "The name of the task."},
-		{"name": "--experiment_name", "type": str, "default": "track_agileVer12", "help": "Name of the experiment to run or load."},
+		{"name": "--experiment_name", "type": str, "default": "track_agileVer15", "help": "Name of the experiment to run or load."},
 		{"name": "--headless", "action": "store_true", "help": "Force display off at all times"},
 		{"name": "--horovod", "action": "store_true", "default": False, "help": "Use horovod for multi-gpu training"},
-		{"name": "--num_envs", "type": int, "default": 8, "help": "Number of environments to create. Batch size will be equal to this"},
+		{"name": "--num_envs", "type": int, "default": 1690, "help": "Number of environments to create. Batch size will be equal to this"},
 		{"name": "--seed", "type": int, "default": 42, "help": "Random seed. Overrides config file if provided."},
 
 		# train setting
-		{"name": "--learning_rate", "type":float, "default": 1.6e-4,
+		{"name": "--learning_rate", "type":float, "default": 1.6e-5,
 			"help": "the learning rate of the optimizer"},
-		{"name": "--batch_size", "type":int, "default": 8,
+		{"name": "--batch_size", "type":int, "default": 1690,
 			"help": "batch size of training. Notice that batch_size should be equal to num_envs"},
 		{"name": "--num_worker", "type":int, "default": 4,
 			"help": "num worker of dataloader"},
-		{"name": "--num_epoch", "type":int, "default": 4090,
+		{"name": "--num_epoch", "type":int, "default": 40900,
 			"help": "num of epoch"},
 		{"name": "--len_sample", "type":int, "default": 650,
 			"help": "length of a sample"},
@@ -62,9 +60,9 @@ def get_args():
 			"help": "learning rate will decrease every step_size steps"},
 
 		# model setting
-		{"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param/track_agileVer12.pth',
+		{"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer15.pth',
 			"help": "The path to model parameters"},
-		{"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param/track_agileVer12.pth',
+		{"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer15.pth',
 			"help": "The path to model parameters"},
 		
 		]
@@ -127,7 +125,7 @@ if __name__ == "__main__":
 	dynamic = IsaacGymDynamics()
 
 	# tmp_model = TrackAgileModuleVer3(device=device).to(device)
-	model = TrackAgileModuleVer5(device=device).to(device)
+	model = TrackAgileModuleVer7(device=device).to(device)
 
 	# model.load_model(args.param_load_path)
 	# tmp_model.load_model(args.param_load_path)
@@ -160,7 +158,8 @@ if __name__ == "__main__":
 		
 		timer = torch.zeros((args.batch_size,), device=device)
 
-		input_buffer = torch.zeros(args.slide_size, args.batch_size, 6+3).to(device)
+		# input_buffer = torch.zeros(args.slide_size, args.batch_size, 9+3).to(device)
+		h0 = None
 
 		reset_buf = None
 		now_quad_state = envs.reset(reset_buf=reset_buf).detach()
@@ -192,18 +191,15 @@ if __name__ == "__main__":
 			body_to_world = torch.transpose(world_to_body, 1, 2)
 
 			body_rel_dis = torch.matmul(world_to_body, torch.unsqueeze(rel_dis, 2)).squeeze(-1)
-			body_acc = torch.matmul(world_to_body, torch.unsqueeze(now_quad_state[:, 9:], 2)).squeeze(-1)
-			tmp_input = torch.cat((body_acc, now_quad_state[:, 3:6], body_rel_dis), dim=1)
+			body_vel = torch.matmul(world_to_body, torch.unsqueeze(now_quad_state[:, 6:9], 2)).squeeze(-1)
+			body_acc = torch.matmul(world_to_body, torch.unsqueeze(now_quad_state[:, 9:12], 2)).squeeze(-1)
+			
+			tmp_input = torch.cat((body_vel, body_acc, now_quad_state[:, 3:6], body_rel_dis), dim=1)
 			# tmp_input_directpred = image_feature
 			# body_pred_dis = model.directpred(tmp_input_directpred)
-
-
 			tmp_input = tmp_input.unsqueeze(0)
-			input_buffer = input_buffer[1:].clone()
-			input_buffer = torch.cat((input_buffer, tmp_input), dim=0)
 			
-			# print(tmp_input[0])
-			action = model.decision_module(input_buffer.clone())
+			action, hn = model.decision_module(tmp_input, h0)
 			
 			# print("Label:0")
 			new_state_dyn, acceleration = dynamic(now_quad_state, action, envs.cfg.sim.dt)
@@ -220,10 +216,9 @@ if __name__ == "__main__":
 			#     print(f"On step {step}, reset {reset_idx}")
 			not_reset_buf = torch.logical_not(reset_buf)
 			num_reset += len(reset_idx)
-			input_buffer[:, reset_idx] = 0
+			# input_buffer[:, reset_idx] = 0
 
-			# world_to_body = dynamic.world_to_body_matrix(now_quad_state[:, 3:6].detach())
-			# body_to_world = torch.transpose(world_to_body, 1, 2)
+
 			# world_pred_dis = torch.matmul(body_to_world, torch.unsqueeze(body_pred_dis, 2)).squeeze(-1)
 			# loss, new_loss = agile_lossVer5(old_loss, now_quad_state, tar_state, 7, tar_ori, 3, timer, envs.cfg.sim.dt, init_vec, world_pred_dis)
 			loss, new_loss = agile_lossVer4(old_loss, now_quad_state, tar_state, 7, tar_ori, 2, timer, envs.cfg.sim.dt, init_vec)
@@ -233,9 +228,11 @@ if __name__ == "__main__":
 			# loss.backward(reset_buf, retain_graph=True)
 			now_quad_state[reset_idx] = envs.reset(reset_buf=reset_buf)[reset_idx].detach()
 			old_loss.reset(reset_idx=reset_idx)
+			h0 = hn
+			h0[:, reset_idx] = 0
 			timer = timer + 1
 			timer[reset_idx] = 0
-			# print("Length of reset buf:", len(reset_idx), not_reset_buf)
+			
 
 			if (not (step + 1) % 50):
 				
@@ -246,7 +243,8 @@ if __name__ == "__main__":
 				optimizer.zero_grad()
 				now_quad_state = now_quad_state.detach()
 				old_loss = AgileLoss(args.batch_size, device=device)
-				input_buffer = input_buffer.detach()
+				# input_buffer = input_buffer.detach()
+				h0 = h0.detach()
 				timer = timer * 0
 
 
@@ -272,11 +270,10 @@ if __name__ == "__main__":
 			
 
 		print(f"Epoch {epoch}, Ave loss = {ave_loss}, num reset = {num_reset}")
-
 		
 		if epoch == 2000:  
 			for param_group in optimizer.param_groups:
-				param_group['lr'] = 1.6e-5
+				param_group['lr'] = 1.6e-6
 		
 		if (epoch + 1) % 4000 == 0:
 			print("Saving Model...")

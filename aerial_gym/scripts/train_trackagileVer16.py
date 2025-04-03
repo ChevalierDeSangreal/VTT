@@ -26,17 +26,19 @@ from aerial_gym.envs import IsaacGymDynamics, NewtonDynamics, IsaacGymOriDynamic
 
 
 """
-Based on trackagileVer9.py
-Use relative distance as input
-Do not use velocity
+Based on trackagileVer12.py
+Do not use attitude as control
+Add f to input
+Expect model estimate rotation in x y axis through f and acceleration
 Use acceleration in body coordinate
+Input will be (f, acceleration * 3, relative distance * 3)
 """
 
 
 def get_args():
 	custom_parameters = [
 		{"name": "--task", "type": str, "default": "track_agileVer2", "help": "The name of the task."},
-		{"name": "--experiment_name", "type": str, "default": "track_agileVer12", "help": "Name of the experiment to run or load."},
+		{"name": "--experiment_name", "type": str, "default": "track_agileVer16", "help": "Name of the experiment to run or load."},
 		{"name": "--headless", "action": "store_true", "help": "Force display off at all times"},
 		{"name": "--horovod", "action": "store_true", "default": False, "help": "Use horovod for multi-gpu training"},
 		{"name": "--num_envs", "type": int, "default": 8, "help": "Number of environments to create. Batch size will be equal to this"},
@@ -62,9 +64,9 @@ def get_args():
 			"help": "learning rate will decrease every step_size steps"},
 
 		# model setting
-		{"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param/track_agileVer12.pth',
+		{"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param/track_agileVer16.pth',
 			"help": "The path to model parameters"},
-		{"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param/track_agileVer12.pth',
+		{"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param/track_agileVer16.pth',
 			"help": "The path to model parameters"},
 		
 		]
@@ -148,9 +150,9 @@ if __name__ == "__main__":
 
 	init_vec = torch.tensor([[1.0, 0.0, 0.0]] * args.batch_size, device=device).unsqueeze(-1)
 
-	
+	f = torch.zeros((args.batch_size, 1)).to(device)
 
-	
+
 
 	for epoch in range(args.num_epoch):
 		
@@ -193,7 +195,7 @@ if __name__ == "__main__":
 
 			body_rel_dis = torch.matmul(world_to_body, torch.unsqueeze(rel_dis, 2)).squeeze(-1)
 			body_acc = torch.matmul(world_to_body, torch.unsqueeze(now_quad_state[:, 9:], 2)).squeeze(-1)
-			tmp_input = torch.cat((body_acc, now_quad_state[:, 3:6], body_rel_dis), dim=1)
+			tmp_input = torch.cat((body_acc, body_rel_dis, f), dim=1)
 			# tmp_input_directpred = image_feature
 			# body_pred_dis = model.directpred(tmp_input_directpred)
 
@@ -204,6 +206,7 @@ if __name__ == "__main__":
 			
 			# print(tmp_input[0])
 			action = model.decision_module(input_buffer.clone())
+			f = action[:, 0]
 			
 			# print("Label:0")
 			new_state_dyn, acceleration = dynamic(now_quad_state, action, envs.cfg.sim.dt)
@@ -233,6 +236,7 @@ if __name__ == "__main__":
 			# loss.backward(reset_buf, retain_graph=True)
 			now_quad_state[reset_idx] = envs.reset(reset_buf=reset_buf)[reset_idx].detach()
 			old_loss.reset(reset_idx=reset_idx)
+			f[reset_idx] = 0
 			timer = timer + 1
 			timer[reset_idx] = 0
 			# print("Length of reset buf:", len(reset_idx), not_reset_buf)

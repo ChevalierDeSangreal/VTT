@@ -1,4 +1,4 @@
 from .track_ground import TrackGroundModel, TrackGroundModelVer2, TrackGroundModelVer3, TrackGroundModelVer4, TrackGroundModelVer5, TrackGroundModelVer6, TrackGroundModelVer7
 from .resnet import Resnet
 from .track_space import TrackSpaceModuleVer0, TrackSpaceModuleVer1, TrackSpaceModuleVer2, TrackSpaceModuleVer3, TrackSpaceModuleVer4
-from .track_agile import TrackAgileModuleVer0, TrackAgileModuleVer1, TrackAgileModuleVer2Dicision, TrackAgileModuleVer2Extractor, TrackAgileModuleVer3, TrackAgileModuleVer4, TrackAgileModuleVer5, TrackAgileModuleVer6
+from .track_agile import TrackAgileModuleVer0, TrackAgileModuleVer1, TrackAgileModuleVer2Dicision, TrackAgileModuleVer2Extractor, TrackAgileModuleVer3, TrackAgileModuleVer4, TrackAgileModuleVer5, TrackAgileModuleVer6, TrackAgileModuleVer7, TrackAgileModuleVer8
