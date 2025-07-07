@@ -237,7 +237,7 @@ if __name__ == "__main__":
 			timer[reset_idx] = 0
 			# print("Length of reset buf:", len(reset_idx), not_reset_buf)
 
-			if (not (step + 1) % 50):
+			if (not (step + 1) % 10):
 				
 				# print(action[0])
 				# print("Loss:", loss[0])
