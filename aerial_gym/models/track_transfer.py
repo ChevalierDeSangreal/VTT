@@ -27,7 +27,7 @@ class TrackAgileModuleVer2Dicision(nn.Module):
         return out, embedding[-1, :, :]
     
 class TrackTransferModuleVer0Predict(nn.Module):
-    def __init__(self, input_size=256, hidden_size=256, seq_len=5, output_size=9, device='cpu'):
+    def __init__(self, input_size=256, hidden_size=256, seq_len=10, output_size=9, device='cpu'):
         super(TrackTransferModuleVer0Predict, self).__init__()
         self.hidden_size = hidden_size
         self.seq_len = seq_len
@@ -78,3 +78,29 @@ class TrackTransferModuleVer0(nn.Module):
     def set_eval_mode(self):
         """Set the model to evaluation mode."""
         self.eval()
+
+class WorldModelVer0(nn.Module):
+    """
+    World model for track transfer
+    """
+    def __init__(self, input_size=12+4, hidden_size=256, output_size=12, device='cpu'):
+        super(WorldModelVer0, self).__init__()
+        self.device = device
+        self.mlp = nn.Sequential(
+            nn.Linear(input_size, hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size, hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size, output_size)
+        ).to(device)
+
+    def forward(self, x):
+        return self.mlp(x)
+
+    def save_model(self, path):
+        """Save the model's state dictionary to the specified path."""
+        torch.save(self.state_dict(), path)
+
+    def load_model(self, path):
+        """Load the model's state dictionary from the specified path."""
+        self.load_state_dict(torch.load(path, map_location=self.device))

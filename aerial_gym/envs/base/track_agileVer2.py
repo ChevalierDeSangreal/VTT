@@ -6,7 +6,7 @@
 """ 
     Modified based on track_agileVer1.py
     Using image as input
-    $$$ By now a still target is set
+    $$$ By now a moving target is set
     $$$ Two place to change from 12 to 13
 """
 import numpy as np

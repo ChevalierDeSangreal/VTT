@@ -32,17 +32,17 @@ Based on trackagileVer11.py
 
 def get_args():
 	custom_parameters = [
-		{"name": "--task", "type": str, "default": "track_transferVer0", "help": "The name of the task."},
-		{"name": "--experiment_name", "type": str, "default": "track_agileVer12", "help": "Name of the experiment to run or load."},
+		{"name": "--task", "type": str, "default": "track_agileVer2", "help": "The name of the task."},
+		{"name": "--experiment_name", "type": str, "default": "track_transferVer0", "help": "Name of the experiment to run or load."},
 		{"name": "--headless", "action": "store_true", "help": "Force display off at all times"},
 		{"name": "--horovod", "action": "store_true", "default": False, "help": "Use horovod for multi-gpu training"},
-		{"name": "--num_envs", "type": int, "default": 8, "help": "Number of environments to create. Batch size will be equal to this"},
+		{"name": "--num_envs", "type": int, "default": 32, "help": "Number of environments to create. Batch size will be equal to this"},
 		{"name": "--seed", "type": int, "default": 42, "help": "Random seed. Overrides config file if provided."},
 
 		# train setting
 		{"name": "--learning_rate", "type":float, "default": 1.6e-4,
 			"help": "the learning rate of the optimizer"},
-		{"name": "--batch_size", "type":int, "default": 8,
+		{"name": "--batch_size", "type":int, "default": 32,
 			"help": "batch size of training. Notice that batch_size should be equal to num_envs"},
 		{"name": "--num_worker", "type":int, "default": 4,
 			"help": "num worker of dataloader"},
@@ -59,9 +59,9 @@ def get_args():
 			"help": "learning rate will decrease every step_size steps"},
 
 		# model setting
-		{"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param/track_agileVer12.pth',
+		{"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param/track_transferVer0.pth',
 			"help": "The path to model parameters"},
-		{"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param/track_agileVer12.pth',
+		{"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param/track_transferVer0.pth',
 			"help": "The path to model parameters"},
 		
 		]
@@ -194,12 +194,12 @@ if __name__ == "__main__":
 				action_seq, embedding = model.decision_module(input_buffer.clone())
 				
 				if step % 50 == 0:
-					init_pos = tar_state[:, :3].detach()
+					init_pos = now_quad_state[:, :3].detach()
 					# print("embedding shape:", embedding.shape)
 					predict_res = model.predict_module(embedding)
 			
 				idx_predict = (step % 50) // 10
-				predict_buffer[:, idx_predict, :3] = tar_state[:, :3].detach() - init_pos
+				predict_buffer[:, idx_predict, :3] = now_quad_state[:, :3].detach() - init_pos
 				predict_buffer[:, idx_predict, 3:6] = body_vel.detach()
 				predict_buffer[:, idx_predict, 6:9] = now_quad_state[:, 3:6].detach()
 
