@@ -60,9 +60,9 @@ def get_args():
 			"help": "learning rate will decrease every step_size steps"},
 
 		# model setting
-		{"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param/track_transferVer0.pth',
+		{"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_transferVer0.pth',
 			"help": "The path to model parameters"},
-		{"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param/track_transferVer0.pth',
+		{"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_transferVer0.pth',
 			"help": "The path to model parameters"},
 		
 		]
@@ -98,7 +98,7 @@ def get_time():
 	return formatted_time_local
 
 if __name__ == "__main__":
-	# torch.autograd.set_detect_anomaly(True)
+	torch.autograd.set_detect_anomaly(True)
 	args = get_args()
 	run_name = f"{args.task}__{args.experiment_name}__{args.seed}__{get_time()}"
 	# print(args.tmp)
@@ -127,7 +127,7 @@ if __name__ == "__main__":
 	# tmp_model = TrackAgileModuleVer3(device=device).to(device)
 	model = TrackTransferModuleVer0(device=device).to(device)
 
-	# model.load_model(args.param_load_path)
+	model.load_model(args.param_load_path)
 	# tmp_model.load_model(args.param_load_path)
 	# model.directpred.load_state_dict(tmp_model.directpred.state_dict())
 	# model.extractor_module.load_state_dict(torch.load('/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_agileVer7.pth', map_location=device))
@@ -157,6 +157,7 @@ if __name__ == "__main__":
 		print(f"Epoch {epoch} begin...")
 		embedding_recording_enabled = (epoch > 2000 and epoch <= 2500)
 		old_loss = AgileLoss(args.batch_size, device=device)
+		loss_pred = torch.tensor(0.0)
 		optimizer.zero_grad()
 		
 		timer = torch.zeros((args.batch_size,), device=device)
@@ -188,6 +189,7 @@ if __name__ == "__main__":
 			
 			if step % 10 == 0:
 
+
 				tmp_input = torch.cat((body_vel, body_acc, now_quad_state[:, 3:6], body_rel_dis), dim=1)
 			
 				tmp_input = tmp_input.unsqueeze(0)
@@ -209,6 +211,8 @@ if __name__ == "__main__":
 			predict_buffer[:, idx_predict, 3:6] = body_vel.detach()
 			predict_buffer[:, idx_predict, 6:9] = now_quad_state[:, 3:6].detach()
 
+			if not (step + 1) % 10:
+				loss_pred = loss_pred.clone() + criterion(predict_buffer.clone(), predict_res).mean(dim=(1, 2))
 
 			# action: [batch_size, 10, 4]
 			action = action_seq[:, step % 10, :].clone()
@@ -240,9 +244,13 @@ if __name__ == "__main__":
 				# print("Loss:", loss[0])
 				# print("shape of predict buffer:", predict_buffer.shape)
 				# print("Shape of predict res:", predict_res.shape)
-				loss_pred = criterion(predict_buffer, predict_res).mean(dim=(1, 2))
+				# loss_pred = criterion(predict_buffer, predict_res).mean(dim=(1, 2))
 				# print("Loss pred shape:", loss_pred.shape)
 				# print("Loss agile shape:", loss_agile.shape)
+				# print("predict res:", predict_res[0, 9, :])
+				# print("predict buffer:", predict_buffer[0, 9, :])
+				# exit(0)
+				
 				loss = 0.1 * loss_pred + 0.9 * loss_agile
 				loss.backward(not_reset_buf)
 				optimizer.step()
@@ -252,6 +260,9 @@ if __name__ == "__main__":
 				input_buffer = input_buffer.detach()
 				timer = timer * 0
 				predict_buffer.zero_().detach_()
+				saved_loss_pred = loss_pred.detach()
+				loss_pred = torch.tensor(0.0)
+				
 
 
 
@@ -262,7 +273,7 @@ if __name__ == "__main__":
 		ave_loss_h = torch.sum(new_loss.h) / args.batch_size
 		# ave_loss_aux = torch.sum(new_loss.aux) / args.batch_size
 		# ave_loss_intent = torch.sum(loss_intent) / args.batch_size
-		ave_loss_predict = torch.sum(loss_pred) / args.batch_size
+		ave_loss_predict = torch.sum(saved_loss_pred) / args.batch_size
 		ave_loss_agile = torch.sum(loss_agile) / args.batch_size
 		ave_loss = torch.sum(loss) / args.batch_size
 		
@@ -286,9 +297,9 @@ if __name__ == "__main__":
 			for param_group in optimizer.param_groups:
 				param_group['lr'] = 1.6e-5
 		
-		if (epoch + 1) % 4000 == 0:
-			print("Saving Model...")
-			model.save_model(args.param_save_path)
+		# if (epoch + 1) % 500 == 0:
+		# 	print("Saving Model...")
+		# 	model.save_model(args.param_save_path)
 
 		if (epoch + 1) % 50 == 0 and len(all_embeddings):
 			all_embeddings_tensor = torch.cat(all_embeddings, dim=0)  # shape: (N, embedding_dim)

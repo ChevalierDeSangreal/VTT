@@ -25,7 +25,7 @@ from aerial_gym.models import TrackTransferModuleVer0, WorldModelVer0
 from aerial_gym.envs import IsaacGymDynamics, NewtonDynamics, IsaacGymOriDynamics, NRIsaacGymDynamics
 # os.path.basename(__file__).rstrip(".py")
 
-
+from tqdm import tqdm
 """
 Based on tracktransferVer1.py
 Train a world model and a controller
@@ -42,13 +42,13 @@ def get_args():
 		{"name": "--seed", "type": int, "default": 42, "help": "Random seed. Overrides config file if provided."},
 
 		# train setting
-		{"name": "--learning_rate", "type":float, "default": 1.6e-4,
+		{"name": "--learning_rate", "type":float, "default": 1.6e-5,
 			"help": "the learning rate of the optimizer"},
 		{"name": "--batch_size", "type":int, "default": 32,
 			"help": "batch size of training. Notice that batch_size should be equal to num_envs"},
 		{"name": "--num_worker", "type":int, "default": 4,
 			"help": "num worker of dataloader"},
-		{"name": "--num_epoch", "type":int, "default": 4090,
+		{"name": "--num_epoch", "type":int, "default": 50,
 			"help": "num of epoch"},
 		{"name": "--len_sample", "type":int, "default": 650,
 			"help": "length of a sample"},
@@ -63,7 +63,7 @@ def get_args():
 		# model setting
 		{"name": "--param_save_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param/track_transferVer2.pth',
 			"help": "The path to model parameters"},
-		{"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param/track_transferVer2.pth',
+		{"name": "--param_load_path", "type":str, "default": '/home/wangzimo/VTT/VTT/aerial_gym/param_saved/track_transferVer0.pth',
 			"help": "The path to model parameters"},
 		
 		]
@@ -99,17 +99,30 @@ def get_time():
 	return formatted_time_local
 
 class EmbStateDataset(Dataset):
-	def __init__(self, device='cpu'):
+	def __init__(self, data_dir='/home/wangzimo/VTT/data', device='cpu'):
 		self.device = device
-		self.embedding = torch.rand(1024, 256, device='cpu')  # 1024 samples, each with 128-dimensional embedding
-		self.state = torch.rand(1024, 12, device='cpu')  #
+		self.embeddings = []
+		self.states = []
+
+		# 遍历所有 pt 文件并加载数据
+		for filename in sorted(os.listdir(data_dir)):
+			if filename.endswith('.pt'):
+				file_path = os.path.join(data_dir, filename)
+				data = torch.load(file_path, map_location='cpu')
+				self.embeddings.append(data['embeddings'])  # (N, 256)
+				self.states.append(data['states'])          # (N, 12)
+			break
+
+		# 拼接所有文件中的数据
+		self.embedding = torch.cat(self.embeddings, dim=0)
+		self.state = torch.cat(self.states, dim=0)
 
 	def __len__(self):
-		return 1024
-	
+		return self.embedding.shape[0]
+
 	def __getitem__(self, idx):
-		emb = self.embedding[idx]  # Move embedding to the specified device
-		stt = self.state[idx]  # Move state to the specified device
+		emb = self.embedding[idx]
+		stt = self.state[idx]
 		return emb, stt
 
 
@@ -138,9 +151,10 @@ if __name__ == "__main__":
 	# dynamic = IsaacGymDynamics()
 	dynamic = IsaacGymDynamics()
 
-	# tmp_model = TrackAgileModuleVer3(device=device).to(device)
 	model_actor = TrackTransferModuleVer0(device=device).to(device)
 	model_world = WorldModelVer0(device=device).to(device)
+
+	model_actor.load_model(args.param_load_path)
 
 	optimizer_actor = optim.Adam(model_actor.decision_module.fc.parameters(), lr=args.learning_rate, eps=1e-5)
 	optimizer_world = optim.Adam(model_world.parameters(), lr=args.learning_rate, eps=1e-5)
@@ -152,8 +166,8 @@ if __name__ == "__main__":
 
 	for epoch in range(args.num_epoch):
 
-		if (epoch) % 5 == 0:
-			print(f"Epoch {epoch} begin...")
+		print(f"Epoch {epoch} begin...")
+		# for batch_idx, (embedding, state) in enumerate(tqdm(dataloader, desc=f"Epoch {epoch+1}/{args.num_epoch}")):
 		for batch_idx, (embedding, state) in enumerate(dataloader):
 			embedding = embedding.to(device)
 			state = state.to(device)
@@ -190,31 +204,49 @@ if __name__ == "__main__":
 				angles_body = new_state_world[:, 3:6]                  # [B,3]
 				world_predict = torch.cat([delta_pos, vel_body, angles_body], dim=1)
 
+				world_to_body = dynamic.world_to_body_matrix(new_state_dyn[:, 3:6])
+				body_to_world = torch.transpose(world_to_body, 1, 2)
+				body_vel = torch.matmul(world_to_body, torch.unsqueeze(new_state_dyn[:, 6:9], 2)).squeeze(-1)
+				tmp_delta_pos = new_state_dyn[:, :3] - init_pos
+				tmp_vel_body = body_vel
+				tmp_angles_body = new_state_dyn[:, 3:6]
+				tmp_state_dyn = torch.cat([tmp_delta_pos, tmp_vel_body, tmp_angles_body], dim=1)
+
 				world_model_quad_state = new_state_world
 
 				loss_world_model += criterion(new_state_world, new_state_dyn.detach())
-				loss_actor += criterion(trajectory_decoder[:, step, :], world_predict)
+				# loss_actor += criterion(trajectory_decoder[:, step, :], world_predict)
+				loss_actor += criterion(trajectory_decoder[:, step, :], tmp_state_dyn.detach())
+				print("trajactory_decoder", trajectory_decoder[0, step, :])
+				print("state_dyn", tmp_state_dyn[0])
+
+			break
 
 			loss_world_model /= args.slide_size
 			loss_actor /= args.slide_size
 			loss = loss_world_model + loss_actor
 
-			# 先归零两个 optim
-			optimizer_world.zero_grad()
-			optimizer_actor.zero_grad()
+			# # 先归零两个 optim
+			# optimizer_world.zero_grad()
+			# # optimizer_actor.zero_grad()
 
-			# 只做一次 backward，构建完整的计算图
-			loss.backward()
+			# # 只做一次 backward，构建完整的计算图
+			# # loss.backward()
+			# loss_world_model.backward()
 
-			# 然后分别更新两个网络
-			optimizer_world.step()
-			optimizer_actor.step()
-			
-		writer.add_scalar("loss/actor_loss", loss_actor, epoch)
-		writer.add_scalar("loss/world_loss", loss_world_model, epoch)
-		writer.add_scalar("loss/loss", loss, epoch)
+			# # 然后分别更新两个网络
+			# optimizer_world.step()
+			# # optimizer_actor.step()
+			writer.add_scalar("loss/actor_loss", loss_actor, batch_idx)
+			writer.add_scalar("loss/world_loss", loss_world_model, batch_idx)
+			writer.add_scalar("loss/loss", loss, batch_idx)
+		# writer.add_scalar("loss/actor_loss", loss_actor, epoch)
+		# writer.add_scalar("loss/world_loss", loss_world_model, epoch)
+		# writer.add_scalar("loss/loss", loss, epoch)
 
-
+		break
+		# print("Saving Model...")
+		# model_actor.save_model(args.param_save_path)
 
 
 
